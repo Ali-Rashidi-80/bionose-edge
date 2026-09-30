@@ -12,6 +12,7 @@
 
 pub mod antennal_lobe;
 pub mod mbon_readout;
+pub mod modbus;
 pub mod mushroom_body;
 pub mod pipeline;
 pub mod weber_fechner;
@@ -19,6 +20,7 @@ pub mod weber_fechner;
 // Re-exports for clean ergonomics
 pub use antennal_lobe::AntennalLobe;
 pub use mbon_readout::{MbonAssociator, ReadoutResult};
+pub use modbus::{BioNoseTelemetry, ModbusException, ModbusSlave};
 pub use mushroom_body::{
     bitmask_hamming, bitmask_overlap, KcBitmask, MushroomBody, ProjectionMatrix,
 };
