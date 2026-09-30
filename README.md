@@ -18,7 +18,7 @@
 [![Proof](https://img.shields.io/badge/proof-13%2C910%20UCI%20samples-147A8A.svg)](#empirical-benchmarks)
 [![Industrial](https://img.shields.io/badge/protocol-Modbus%20RTU%20%2F%20RS485-3ECFB2.svg)](#modbus-rtu--rs485-specification)
 
-`crates/bionose-core` · `crates/bionose-cli` · [Architecture](ARCHITECTURE.md) · [Readiness](PRODUCTION_READINESS.md) · [ADR-002](docs/adr/adr_002_drosophila_falsification_and_hybrid_pivot.md) · [Install](INSTALL.md) · [Applications](docs/APPLICATIONS.md)
+`crates/bionose-core` · `crates/bionose-cli` · [Architecture](ARCHITECTURE.md) · [Readiness](PRODUCTION_READINESS.md) · [ADR-002](docs/adr/adr_002_drosophila_falsification_and_hybrid_pivot.md) · [Install](INSTALL.md) · [Applications](docs/APPLICATIONS.md) · [FAQ](docs/FAQ.md)
 
 <br/>
 
@@ -399,6 +399,8 @@ bionose-edge/
 │       └── data/Dataset/           # 10 physical batches (13,910 real measurements)
 │
 ├── docs/
+│   ├── FAQ.md                      # Engineering FAQ & Design Philosophy
+│   ├── FAQ.fa.md                   # Persian Engineering FAQ (پرسش‌های متداول مهندسی)
 │   ├── APPLICATIONS.md             # Industrial & IoT applications guide
 │   ├── APPLICATIONS.fa.md          # Persian applications guide (راهنمای کاربردها)
 │   └── adr/
@@ -436,6 +438,8 @@ bionose-edge/
 | [**INSTALL.fa.md**](INSTALL.fa.md) | Persian | Persian installation guide (راهنمای نصب و راه‌اندازی فارسی) |
 | [**APPLICATIONS.md**](docs/APPLICATIONS.md) | English | Industrial & IoT application engineering guide and use-case screening |
 | [**APPLICATIONS.fa.md**](docs/APPLICATIONS.fa.md) | Persian | Persian application engineering guide (راهنمای جامع کاربردهای صنعتی و اینترنت اشیا) |
+| [**FAQ.md**](docs/FAQ.md) | English | Engineering FAQ, design philosophy, and adversarial questions |
+| [**FAQ.fa.md**](docs/FAQ.fa.md) | Persian | Persian engineering FAQ (پرسش‌های متداول مهندسی و داوری خصمانه) |
 | [**ADR-002**](docs/adr/adr_002_drosophila_falsification_and_hybrid_pivot.md) | English | Architectural Decision Record on Mushroom Body falsification |
 | [**CONTRIBUTING.md**](CONTRIBUTING.md) | English | Coding standards, testing protocols, and PR workflows |
 | [**CONTRIBUTING.fa.md**](CONTRIBUTING.fa.md) | Persian | Persian contribution guidelines (راهنمای مشارکت فارسی) |
