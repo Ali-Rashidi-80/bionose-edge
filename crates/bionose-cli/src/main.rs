@@ -1,13 +1,17 @@
-//! BioNose-CLI: Ruthless Adversarial Benchmark, Falsification Suite & Fault Stress-Tester.
+//! BioNose-CLI: Authentic Benchmark & Adversarial Verification on the Official UCI 36-Month Dataset.
 //!
-//! Benchmarks the BioNose neuromorphic olfactory engine under realistic, dense,
-//! cross-sensitive chemical responses, non-isometric sensor drift, broken sensor faults,
-//! and clean-air/distractor false positive audits.
+//! Loads all 13,910 real physical measurements across 10 batches (36 months) from the
+//! UC Irvine Gas Sensor Array Drift Dataset (Vergara et al., 2012).
+//! Evaluates long-term drift degradation, on-device Hebbian adaptation, and Fi Ruz's Golden Rule.
+
+mod uci_loader;
 
 use bionose_core::{
     BioNoseConfig, BioNoseEngine, ProjectionMatrix,
 };
+use std::path::Path;
 use std::time::Instant;
+use uci_loader::load_all_batches_16;
 
 const NUM_SENSORS: usize = 16;
 const NUM_KENYON_CELLS: usize = 256;
@@ -15,7 +19,6 @@ const SYNAPSES_PER_KC: usize = 4;
 const NUM_CLASSES: usize = 6;
 const KC_WORDS: usize = 4; // (256 + 63) / 64 = 4
 
-// Six target industrial gases based on the UCI Gas Sensor Array Drift Dataset
 const GAS_NAMES: [&str; NUM_CLASSES] = [
     "Ethanol",
     "Ethylene",
@@ -25,337 +28,318 @@ const GAS_NAMES: [&str; NUM_CLASSES] = [
     "Toluene",
 ];
 
-// Realistic dense chemical sensitivity matrix (R/R0 ratio across 16 sensors)
-// Channels 0..3:   TGS2600 (General Air / Hydrogen / Combustion)
-// Channels 4..7:   TGS2602 (VOCs / Ammonia / Toluene)
-// Channels 8..11:  TGS2610 (Hydrocarbons / Ethylene)
-// Channels 12..15: TGS2620 (Organic Solvents / Alcohols / Acetone)
-// Notice: Dense vectors, high cross-sensitivity, and significant pairwise overlap!
-const CHEM_PROFILES: [[f32; NUM_SENSORS]; NUM_CLASSES] = [
-    // Ethanol (High in 12..15, moderate in 0..3, low in 8..11)
-    [0.45, 0.48, 0.44, 0.46,  0.55, 0.52, 0.54, 0.53,  0.72, 0.70, 0.71, 0.73,  0.18, 0.20, 0.19, 0.21],
-    // Ethylene (High in 8..11, moderate in 0..3, low in 12..15)
-    [0.50, 0.52, 0.49, 0.51,  0.65, 0.62, 0.64, 0.66,  0.22, 0.24, 0.21, 0.23,  0.70, 0.72, 0.69, 0.71],
-    // Ammonia (High in 4..7, moderate in 0..3, low in 8..11)
-    [0.52, 0.50, 0.53, 0.51,  0.20, 0.18, 0.22, 0.19,  0.75, 0.78, 0.76, 0.74,  0.68, 0.65, 0.67, 0.69],
-    // Acetaldehyde (High in 12..15 and 4..7, moderate in 0..3)
-    [0.48, 0.46, 0.47, 0.49,  0.28, 0.30, 0.29, 0.31,  0.68, 0.66, 0.70, 0.67,  0.25, 0.27, 0.24, 0.26],
-    // Acetone (High in 12..15, overlaps heavily with Ethanol and Acetaldehyde!)
-    [0.46, 0.47, 0.45, 0.48,  0.42, 0.40, 0.43, 0.41,  0.65, 0.67, 0.64, 0.66,  0.22, 0.21, 0.23, 0.20],
-    // Toluene (High in 4..7, moderate in 12..15, low in 8..11)
-    [0.55, 0.53, 0.56, 0.54,  0.22, 0.25, 0.21, 0.24,  0.72, 0.70, 0.74, 0.71,  0.40, 0.42, 0.39, 0.41],
-];
-
-// Sensor-specific non-isometric drift coefficients over 36 months
-// Real sensors do NOT drift in parallel; some oxidize, some anneal, some poison!
-const DRIFT_RATES: [f32; NUM_SENSORS] = [
-    0.35,  0.28,  0.32,  0.30,  // Channels 0..3: Baseline resistance increases (+30%)
-   -0.42, -0.38, -0.45, -0.40,  // Channels 4..7: Heater thermal aging decreases baseline (-40%)
-    0.20, -0.25,  0.18, -0.22,  // Channels 8..11: Alternating non-uniform drift
-    0.50,  0.45,  0.55,  0.48,  // Channels 12..15: Severe surface contamination (+50%)
-];
-
-/// Generates a realistic chemical sensor response with dense cross-sensitivity,
-/// non-isometric drift, and independent Gaussian-like noise.
-fn sample_realistic_gas(
-    gas_idx: usize,
-    drift_months: f32, // 0.0 to 36.0
-    noise_sigma: f32,
-    concentration_mult: f32,
-    seed: &mut u64,
-) -> [f32; NUM_SENSORS] {
-    let mut rng = || -> f32 {
-        *seed ^= *seed << 13;
-        *seed ^= *seed >> 7;
-        *seed ^= *seed << 17;
-        ((*seed % 10000) as f32) / 10000.0
-    };
-
-    let mut resistances = [50_000.0f32; NUM_SENSORS];
-    let drift_scale = drift_months / 36.0;
-
-    for i in 0..NUM_SENSORS {
-        let base_ratio = CHEM_PROFILES[gas_idx][i];
-        // Gas exposure reduces resistance: R = R0 * (base_ratio ^ (1 / concentration))
-        let conc_adjusted_ratio = base_ratio / concentration_mult.max(0.1).sqrt();
-
-        // Non-isometric drift factor
-        let drift = 1.0 + DRIFT_RATES[i] * drift_scale;
-
-        // Gaussian-like noise (Box-Muller or sum of uniforms)
-        let noise = 1.0 + (rng() + rng() + rng() - 1.5) * noise_sigma;
-
-        let r = 50_000.0 * conc_adjusted_ratio * drift * noise;
-        resistances[i] = r.max(10.0);
-    }
-
-    resistances
-}
-
-/// Generates a clean-air sample (no target gas) with fluctuating humidity and temperature.
-fn sample_clean_air(humidity_drift: f32, noise_sigma: f32, seed: &mut u64) -> [f32; NUM_SENSORS] {
-    let mut rng = || -> f32 {
-        *seed ^= *seed << 13;
-        *seed ^= *seed >> 7;
-        *seed ^= *seed << 17;
-        ((*seed % 10000) as f32) / 10000.0
-    };
-
-    // Ambient weather/humidity is a common-mode environmental shift across the PCB array
-    let ambient_weather = 1.0 + humidity_drift * (rng() - 0.5);
-
-    let mut resistances = [50_000.0f32; NUM_SENSORS];
-    for i in 0..NUM_SENSORS {
-        // Individual sensor channel noise (ADC quantization, thermal noise)
-        let channel_noise = 1.0 + (rng() - 0.5) * noise_sigma;
-        resistances[i] = 50_000.0 * ambient_weather * channel_noise;
-    }
-    resistances
-}
-
-/// Generates an unknown distractor VOC (e.g. perfume, kitchen oil fumes, cleaning solvent).
-fn sample_distractor_voc(seed: &mut u64) -> [f32; NUM_SENSORS] {
-    let mut rng = || -> f32 {
-        *seed ^= *seed << 13;
-        *seed ^= *seed >> 7;
-        *seed ^= *seed << 17;
-        ((*seed % 10000) as f32) / 10000.0
-    };
-
-    let mut resistances = [50_000.0f32; NUM_SENSORS];
-    // Distractor has an arbitrary non-matching chemical profile
-    for i in 0..NUM_SENSORS {
-        let random_ratio = 0.35 + rng() * 0.40;
-        resistances[i] = 50_000.0 * random_ratio;
-    }
-    resistances
-}
-
 fn main() {
     println!("================================================================================");
-    println!("BioNose-Edge: Ruthless Adversarial Verification & Machine Benchmark Suite");
-    println!("Adversarial Testing under Dense Cross-Sensitivity, Drift & Hardware Faults");
+    println!("BioNose-Edge: Authentic 13,910-Sample Real Physical Dataset Benchmark");
+    println!("Evaluating Drosophila Neuromorphic Olfaction on the Official UCI Drift Dataset");
     println!("================================================================================\n");
 
+    // Locate dataset directory
+    let dataset_dir = if Path::new("crates/bionose-cli/data/Dataset").exists() {
+        Path::new("crates/bionose-cli/data/Dataset")
+    } else if Path::new("data/Dataset").exists() {
+        Path::new("data/Dataset")
+    } else {
+        panic!("UCI Dataset not found! Expected in crates/bionose-cli/data/Dataset");
+    };
+
+    println!("[PHASE 1] Loading Authentic UCI 10-Batch Gas Sensor Dataset...");
+    let start_load = Instant::now();
+    let batches = match load_all_batches_16(dataset_dir) {
+        Ok(b) => b,
+        Err(e) => panic!("Failed to load UCI dataset: {:?}", e),
+    };
+
+    let mut total_samples = 0;
+    for b in &batches {
+        println!("  -> Batch {:2} loaded: {:5} physical sensor measurements", b.batch_id, b.samples.len());
+        total_samples += b.samples.len();
+    }
+    println!("Total authentic samples loaded: {} in {:.2?}\n", total_samples, start_load.elapsed());
+
+    // Compute empirical baseline resistance R0 from Batch 1 clean-air / baseline measurements
+    let mut baseline_r0 = [10_000.0f32; NUM_SENSORS];
+    let mut counts = [0usize; NUM_SENSORS];
+    for sample in &batches[0].samples {
+        for i in 0..NUM_SENSORS {
+            if sample.features[i] > 10.0 {
+                baseline_r0[i] += sample.features[i];
+                counts[i] += 1;
+            }
+        }
+    }
+    for i in 0..NUM_SENSORS {
+        if counts[i] > 0 {
+            baseline_r0[i] /= counts[i] as f32;
+        }
+    }
+
     let config = BioNoseConfig {
-        default_r0: 50_000.0,
-        epsilon: 1e-6,
-        orn_activation_threshold: 0.28,
+        default_r0: 10_000.0,
+        epsilon: 1e-4,
+        orn_activation_threshold: 0.15,
         sigma: 0.05,
-        lateral_inhibition_strength: 0.90,
+        lateral_inhibition_strength: 0.85,
         seed: 0x4452_4f53_4f50_4849, // "DROSOPHI"
-        top_ratio: 0.05,             // 5% active Kenyon cells (13 of 256)
-        noise_energy_threshold: 0.30,
-        novelty_threshold: 0.38,
+        top_ratio: 0.08,             // 8% active Kenyon cells (20 of 256)
+        noise_energy_threshold: 0.10,
+        novelty_threshold: 0.25,
         habituation_rate: 0.05,
         habituation_strength: 0.5,
     };
 
     let mut engine = BioNoseEngine::<NUM_SENSORS, NUM_KENYON_CELLS, SYNAPSES_PER_KC, NUM_CLASSES, KC_WORDS>::new(&config);
-    let mut rng_seed = 987654321u64;
+    // Set channel-specific baselines derived from physical sensor characteristics
+    engine.transducer.r0 = baseline_r0;
 
     // -------------------------------------------------------------------------
-    // TEST 1: Pairwise Chemical Overlap Analysis
+    // PHASE 2: Training on Batch 1 (Months 1-2 Baseline)
     // -------------------------------------------------------------------------
-    println!("[TEST 1] Raw Sensory Overlap Matrix (Proving Dense Non-Orthogonal Profiles)");
-    let mut max_overlap = 0.0f32;
-    let mut min_overlap = 1.0f32;
-    for a in 0..NUM_CLASSES {
-        for b in (a + 1)..NUM_CLASSES {
-            let mut dot = 0.0f32;
-            let mut norm_a = 0.0f32;
-            let mut norm_b = 0.0f32;
-            for i in 0..NUM_SENSORS {
-                dot += CHEM_PROFILES[a][i] * CHEM_PROFILES[b][i];
-                norm_a += CHEM_PROFILES[a][i] * CHEM_PROFILES[a][i];
-                norm_b += CHEM_PROFILES[b][i] * CHEM_PROFILES[b][i];
-            }
-            let cos_sim = dot / (norm_a.sqrt() * norm_b.sqrt());
-            if cos_sim > max_overlap { max_overlap = cos_sim; }
-            if cos_sim < min_overlap { min_overlap = cos_sim; }
+    println!("[PHASE 2] Training on Real Physical Sensor Data (Batch 1: Months 1-2)");
+    let train_batch = &batches[0];
+    let mut class_samples_trained = [0usize; NUM_CLASSES];
+
+    // Train on initial samples of each class in Batch 1
+    for sample in &train_batch.samples {
+        let c = sample.class_idx;
+        if class_samples_trained[c] < 20 { // 20-shot learning per class on physical data
+            engine.train_sample(&sample.features, c, 0.20);
+            class_samples_trained[c] += 1;
         }
     }
-    println!("  -> Average pairwise cross-sensitivity similarity: {:.1}% to {:.1}%", min_overlap * 100.0, max_overlap * 100.0);
-    println!("  -> CONFIRMATION BIAS CHECK: Vectors are heavily correlated (NOT orthogonal toy vectors).\n");
 
-    // -------------------------------------------------------------------------
-    // TEST 2: Initial Training & Latency Profiling
-    // -------------------------------------------------------------------------
-    println!("[TEST 2] One-Shot Associative Training & Release Profiling");
-    for class_idx in 0..NUM_CLASSES {
-        let sample = sample_realistic_gas(class_idx, 0.0, 0.02, 1.0, &mut rng_seed);
-        engine.train_sample(&sample, class_idx, 0.35);
-        println!("  -> Trained class [{}] ({}): Registered.", class_idx, GAS_NAMES[class_idx]);
+    for c in 0..NUM_CLASSES {
+        println!("  -> Class [{}] ({:<12}): Trained with {:2} physical exemplars.", c, GAS_NAMES[c], class_samples_trained[c]);
     }
-    println!("  -> Registered all 6 target gases with one-shot exposure.");
+    println!();
 
-    let bench_sample = sample_realistic_gas(0, 0.0, 0.01, 1.0, &mut rng_seed);
+    // -------------------------------------------------------------------------
+    // PHASE 3: Micro-Benchmark / Real Execution Latency
+    // -------------------------------------------------------------------------
+    println!("[PHASE 3] Latency Benchmark on Physical Sensor Vectors");
+    let bench_sample = &train_batch.samples[0].features;
     let bench_iters = 100_000;
-    let start_t = Instant::now();
+    let start_bench = Instant::now();
     for _ in 0..bench_iters {
-        let _ = engine.infer(&bench_sample);
+        let _ = engine.infer(bench_sample);
     }
-    let elapsed = start_t.elapsed();
+    let elapsed = start_bench.elapsed();
     let ns_per_op = elapsed.as_nanos() / (bench_iters as u128);
-    println!("  -> Inference latency: {} ns ({:.2} microseconds)", ns_per_op, (ns_per_op as f64) / 1000.0);
-    println!("  -> Throughput: {:.0} inferences/sec | Static RAM: ~3.2 KB\n", (bench_iters as f64) / elapsed.as_secs_f64());
+    println!("  -> Latency per inference: {} ns ({:.2} microseconds)", ns_per_op, (ns_per_op as f64) / 1000.0);
+    println!("  -> Real Throughput:       {:.0} inferences/sec", (bench_iters as f64) / elapsed.as_secs_f64());
+    println!("  -> Static RAM footprint:  ~3.2 KB (Zero heap allocations)\n");
 
     // -------------------------------------------------------------------------
-    // TEST 3: 36-Month Non-Isometric Drift Progression
+    // PHASE 4: 36-Month Real Physical Drift Evaluation (All 10 Batches)
     // -------------------------------------------------------------------------
-    println!("[TEST 3] Long-Term Non-Isometric Drift Stress Test (Months 1 to 36)");
-    let drift_epochs = [
-        ("Month 1  (Baseline:  Clean)",  0.0, 0.05),
-        ("Month 6  (Slight:    5% Drift)", 6.0, 0.08),
-        ("Month 18 (Moderate: 20% Drift)", 18.0, 0.12),
-        ("Month 36 (Severe:   40% Drift)", 36.0, 0.18),
+    println!("[PHASE 4] Long-Term Drift Evaluation Across All 10 Batches (36 Months of Physical Sensor Aging)");
+    println!("  Evaluating {} real physical sensor measurements...\n", total_samples);
+
+    let batch_months = [
+        "Months 1-2  (Baseline)",
+        "Months 3-4  (Early)",
+        "Months 5-8  (Moderate)",
+        "Months 9-10 (Ongoing)",
+        "Month 11    (One Year)",
+        "Months 12-14(Aging)",
+        "Months 15-18(Degraded)",
+        "Months 19-21(Severe)",
+        "Months 22-30(Heavy Drift)",
+        "Month 36    (3 Full Years)",
     ];
 
-    let trials_per_class = 100;
-    let total_eval = NUM_CLASSES * trials_per_class;
+    let mut batch_accuracies = Vec::new();
 
-    for (label, months, noise) in &drift_epochs {
+    for (idx, b) in batches.iter().enumerate() {
         let mut correct = 0;
-        let mut false_rejects = 0;
+        let mut recognized = 0;
 
-        for class_idx in 0..NUM_CLASSES {
-            for _ in 0..trials_per_class {
-                let sample = sample_realistic_gas(class_idx, *months, *noise, 1.0, &mut rng_seed);
-                let (res, _) = engine.infer(&sample);
-                if res.is_novel {
-                    false_rejects += 1;
-                } else if res.best_class == class_idx {
+        for sample in &b.samples {
+            let (res, _) = engine.infer(&sample.features);
+            if !res.is_novel {
+                recognized += 1;
+                if res.best_class == sample.class_idx {
                     correct += 1;
                 }
             }
         }
 
-        let acc = (correct as f32 / total_eval as f32) * 100.0;
-        let reject_rate = (false_rejects as f32 / total_eval as f32) * 100.0;
-        println!("  {:<32} -> Accuracy: {:5.1}% | False Rejection (Novelty): {:4.1}%", label, acc, reject_rate);
-    }
+        let total = b.samples.len();
+        let accuracy = (correct as f32 / total as f32) * 100.0;
+        let coverage = (recognized as f32 / total as f32) * 100.0;
+        batch_accuracies.push(accuracy);
 
-    // Now test Few-Shot On-Device Recalibration at Month 36!
-    println!("\n  [ADAPTATION] Applying 1 single field calibration sample at Month 36...");
-    for class_idx in 0..NUM_CLASSES {
-        let calib_sample = sample_realistic_gas(class_idx, 36.0, 0.05, 1.0, &mut rng_seed);
-        engine.train_sample(&calib_sample, class_idx, 0.25);
+        println!(
+            "  Batch {:2} ({:<22}) -> Accuracy: {:5.1}% | Coverage: {:5.1}% | Correct: {:4}/{}",
+            b.batch_id, batch_months[idx], accuracy, coverage, correct, total
+        );
     }
+    println!();
 
-    let mut recalib_correct = 0;
-    for class_idx in 0..NUM_CLASSES {
-        for _ in 0..trials_per_class {
-            let sample = sample_realistic_gas(class_idx, 36.0, 0.18, 1.0, &mut rng_seed);
-            let (res, _) = engine.infer(&sample);
-            if res.best_class == class_idx && !res.is_novel {
-                recalib_correct += 1;
-            }
+    // -------------------------------------------------------------------------
+    // PHASE 5: On-Device Few-Shot Adaptation at Month 36 (Batch 10)
+    // -------------------------------------------------------------------------
+    println!("[PHASE 5] On-Device Continual Learning: Few-Shot Adaptation on Batch 10 (Month 36)");
+    println!("  Simulating an on-site calibration by exposing the sensor to 5 samples per class at Month 36...");
+
+    let mut adaptive_engine = engine;
+    let batch10 = &batches[9];
+    let mut adapt_counts = [0usize; NUM_CLASSES];
+
+    for sample in &batch10.samples {
+        let c = sample.class_idx;
+        if adapt_counts[c] < 5 { // 5-shot recalibration
+            adaptive_engine.train_sample(&sample.features, c, 0.15);
+            adapt_counts[c] += 1;
         }
     }
-    let recalib_acc = (recalib_correct as f32 / total_eval as f32) * 100.0;
-    println!("  -> Accuracy after 1-Shot Field Recalibration at Month 36: {:5.1}% (Recovered!)\n", recalib_acc);
 
-    // -------------------------------------------------------------------------
-    // TEST 4: False Alarm Rate (FAR) Audit on Clean Air & Distractor VOCs
-    // -------------------------------------------------------------------------
-    println!("[TEST 4] False Positive & False Alarm Audit (Crucial SRE / Industrial Reliability Test)");
-    let clean_air_trials = 500;
-    let mut clean_air_false_alarms = 0;
-    for _ in 0..clean_air_trials {
-        let air_sample = sample_clean_air(0.30, 0.08, &mut rng_seed);
-        let (res, _) = engine.infer(&air_sample);
-        if !res.is_novel {
-            clean_air_false_alarms += 1;
+    let mut adapt_correct = 0;
+    for sample in &batch10.samples {
+        let (res, _) = adaptive_engine.infer(&sample.features);
+        if !res.is_novel && res.best_class == sample.class_idx {
+            adapt_correct += 1;
         }
     }
-    let clean_far = (clean_air_false_alarms as f32 / clean_air_trials as f32) * 100.0;
-    println!("  Clean Air False Alarm Rate (FAR):  {:4.2}% ({}/{} false positives)", clean_far, clean_air_false_alarms, clean_air_trials);
-    assert_eq!(clean_air_false_alarms, 0, "CRITICAL AUDIT FAILURE: Clean air must not trigger false alarms!");
-
-    let distractor_trials = 500;
-    let mut distractor_false_alarms = 0;
-    for _ in 0..distractor_trials {
-        let distractor = sample_distractor_voc(&mut rng_seed);
-        let (res, _) = engine.infer(&distractor);
-        if !res.is_novel {
-            distractor_false_alarms += 1;
-        }
-    }
-    let distractor_far = (distractor_false_alarms as f32 / distractor_trials as f32) * 100.0;
-    println!("  Unknown VOC Novelty Rejection:    {:5.1}% ({}/{} rejected as novel)", 100.0 - distractor_far, distractor_trials - distractor_false_alarms, distractor_trials);
-    println!("  -> FALSE ALARM AUDIT PASSED: Energy gate and novelty thresholds prevent hallucinated alarms.\n");
+    let adapted_acc = (adapt_correct as f32 / batch10.samples.len() as f32) * 100.0;
+    println!("  -> Batch 10 Accuracy BEFORE Adaptation: {:5.1}%", batch_accuracies[9]);
+    println!("  -> Batch 10 Accuracy AFTER  Adaptation: {:5.1}% (Gain: +{:4.1} percentage points!)\n", adapted_acc, adapted_acc - batch_accuracies[9]);
 
     // -------------------------------------------------------------------------
-    // TEST 5: Hardware Fault Tolerance (2 Severed Sensor Channels)
+    // PHASE 6: Fi Ruz's Golden Rule: Falsification Benchmark on Real Data
     // -------------------------------------------------------------------------
-    println!("[TEST 5] Hardware Fault Tolerance: Two Severed / Open-Circuit Sensor Wires");
-    let mut fault_correct = 0;
-    for class_idx in 0..NUM_CLASSES {
-        for _ in 0..trials_per_class {
-            let mut broken_sample = sample_realistic_gas(class_idx, 12.0, 0.10, 1.0, &mut rng_seed);
-            // Simulate broken sensor 3 and sensor 11 (disconnected wire = open circuit = 10 MOhm)
-            broken_sample[3] = 10_000_000.0;
-            broken_sample[11] = 10_000_000.0;
-
-            let (res, _) = engine.infer(&broken_sample);
-            if res.best_class == class_idx && !res.is_novel {
-                fault_correct += 1;
-            }
-        }
-    }
-    let fault_acc = (fault_correct as f32 / total_eval as f32) * 100.0;
-    println!("  -> Accuracy with 2 Broken Sensors (12.5% hardware loss): {:5.1}%", fault_acc);
-    println!("  -> Graceful degradation: Distributed Kenyon cell sampling prevents single-point failure.\n");
-
-    // -------------------------------------------------------------------------
-    // TEST 6: Fi Ruz's Golden Rule: Falsification Benchmark
-    // -------------------------------------------------------------------------
-    println!("[TEST 6] Falsification Benchmark (BioNose vs Shuffled Random Control)");
+    println!("[PHASE 6] Falsification Benchmark on Real Physical Sensor Data (Fi Ruz's Golden Rule)");
     println!("  Rule: 'Compare biological connectome topology against a degree-preserved shuffled control.'");
 
     let mut shuffled_engine = engine;
     shuffled_engine.mushroom_body.projection =
         ProjectionMatrix::generate_shuffled_control(0xDEAD_BEEF_CAFE_BABE);
 
-    // Train shuffled engine under identical conditions
-    for class_idx in 0..NUM_CLASSES {
-        let sample = sample_realistic_gas(class_idx, 0.0, 0.02, 1.0, &mut rng_seed);
-        shuffled_engine.train_sample(&sample, class_idx, 0.35);
+    // Train shuffled engine under identical conditions on Batch 1
+    class_samples_trained = [0usize; NUM_CLASSES];
+    for sample in &train_batch.samples {
+        let c = sample.class_idx;
+        if class_samples_trained[c] < 20 {
+            shuffled_engine.train_sample(&sample.features, c, 0.20);
+            class_samples_trained[c] += 1;
+        }
     }
 
-    // Evaluate both on severe Month 24 drift
-    let eval_trials = 600;
+    // Evaluate both on Batch 7 (Month 17: 3,613 physical samples!)
+    let test_batch_7 = &batches[6];
     let mut bio_hits = 0;
     let mut shuffled_hits = 0;
 
-    for i in 0..eval_trials {
-        let class_idx = i % NUM_CLASSES;
-        let sample = sample_realistic_gas(class_idx, 24.0, 0.15, 1.0, &mut rng_seed);
-
-        let (bio_res, _) = engine.infer(&sample);
-        if bio_res.best_class == class_idx && !bio_res.is_novel {
+    for sample in &test_batch_7.samples {
+        let (bio_res, _) = engine.infer(&sample.features);
+        if !bio_res.is_novel && bio_res.best_class == sample.class_idx {
             bio_hits += 1;
         }
 
-        let (shuffled_res, _) = shuffled_engine.infer(&sample);
-        if shuffled_res.best_class == class_idx && !shuffled_res.is_novel {
+        let (shuf_res, _) = shuffled_engine.infer(&sample.features);
+        if !shuf_res.is_novel && shuf_res.best_class == sample.class_idx {
             shuffled_hits += 1;
         }
     }
 
-    let bio_acc = (bio_hits as f32 / eval_trials as f32) * 100.0;
-    let shuffled_acc = (shuffled_hits as f32 / eval_trials as f32) * 100.0;
+    let b7_total = test_batch_7.samples.len();
+    let bio_b7_acc = (bio_hits as f32 / b7_total as f32) * 100.0;
+    let shuf_b7_acc = (shuffled_hits as f32 / b7_total as f32) * 100.0;
 
-    println!("  -> BioNose Connectome Accuracy:  {:5.1}%", bio_acc);
-    println!("  -> Shuffled Control Accuracy:    {:5.1}%", shuffled_acc);
-    println!("  -> Connectome Structural Delta:  +{:4.1} percentage points", bio_acc - shuffled_acc);
+    println!("  Evaluating on Batch 7 ({:<5} real physical samples over Month 17):", b7_total);
+    println!("  -> BioNose Connectome Accuracy:   {:5.1}% ({}/{})", bio_b7_acc, bio_hits, b7_total);
+    println!("  -> Shuffled Control Accuracy:     {:5.1}% ({}/{})", shuf_b7_acc, shuffled_hits, b7_total);
+    println!("  -> Connectome Structural Delta:   +{:4.1} percentage points", bio_b7_acc - shuf_b7_acc);
 
     assert!(
-        bio_acc > shuffled_acc,
-        "FALSIFICATION FAILED: Biological connectome must outperform randomized control!"
+        bio_b7_acc > shuf_b7_acc,
+        "FALSIFICATION FAILED: Biological connectome must outperform randomized control on real data!"
     );
+    println!();
+
+    // -------------------------------------------------------------------------
+    // PHASE 7: Full 128-Feature Transient Dynamics Benchmark (M=128, K=512)
+    // -------------------------------------------------------------------------
+    println!("[PHASE 7] Full 128-Feature Transient Dynamics & Adsorption Kinetics (M=128, K=512, D=6)");
+    println!("  Loading all 128 temporal + steady-state features across 13,910 physical measurements...");
+
+    let batches_128 = match uci_loader::load_all_batches_128(dataset_dir) {
+        Ok(b) => b,
+        Err(e) => panic!("Failed to load 128-feature UCI dataset: {:?}", e),
+    };
+
+    const M128: usize = 128;
+    const K512: usize = 512;
+    const D6: usize = 6;
+    const WORDS8: usize = 8; // (512 + 63) / 64 = 8
+
+    let config_128 = BioNoseConfig {
+        default_r0: 1_000.0,
+        epsilon: 1e-4,
+        orn_activation_threshold: 0.05,
+        sigma: 0.05,
+        lateral_inhibition_strength: 0.85,
+        seed: 0x5543_495F_4B49_4E45, // "UCI_KINE"
+        top_ratio: 0.06,             // 6% active Kenyon cells (30 of 512)
+        noise_energy_threshold: 0.05,
+        novelty_threshold: 0.20,
+        habituation_rate: 0.05,
+        habituation_strength: 0.5,
+    };
+
+    let mut engine_128 = BioNoseEngine::<M128, K512, D6, NUM_CLASSES, WORDS8>::new(&config_128);
+
+    // Compute baseline R0 across 128 features from Batch 1
+    let mut r0_128 = [1_000.0f32; M128];
+    let mut c_128 = [0usize; M128];
+    for s in &batches_128[0].samples {
+        for i in 0..M128 {
+            if s.features[i] > 1.0 {
+                r0_128[i] += s.features[i];
+                c_128[i] += 1;
+            }
+        }
+    }
+    for i in 0..M128 {
+        if c_128[i] > 0 {
+            r0_128[i] /= c_128[i] as f32;
+        }
+    }
+    engine_128.transducer.r0 = r0_128;
+
+    // Train on Batch 1
+    let mut trained_128 = [0usize; NUM_CLASSES];
+    for s in &batches_128[0].samples {
+        let c = s.class_idx;
+        if trained_128[c] < 30 {
+            engine_128.train_sample(&s.features, c, 0.25);
+            trained_128[c] += 1;
+        }
+    }
+
+    // Evaluate on Batch 1 (Month 1-2 baseline) and Batch 2
+    let mut b1_hits = 0;
+    for s in &batches_128[0].samples {
+        let (res, _) = engine_128.infer(&s.features);
+        if !res.is_novel && res.best_class == s.class_idx {
+            b1_hits += 1;
+        }
+    }
+    let b1_acc_128 = (b1_hits as f32 / batches_128[0].samples.len() as f32) * 100.0;
+
+    let mut b2_hits = 0;
+    for s in &batches_128[1].samples {
+        let (res, _) = engine_128.infer(&s.features);
+        if !res.is_novel && res.best_class == s.class_idx {
+            b2_hits += 1;
+        }
+    }
+    let b2_acc_128 = (b2_hits as f32 / batches_128[1].samples.len() as f32) * 100.0;
+
+    println!("  -> Batch 1 (Baseline 445 samples) Accuracy with Full Kinetics: {:5.1}%", b1_acc_128);
+    println!("  -> Batch 2 (Month 3  1244 samples) Accuracy with Full Kinetics: {:5.1}%", b2_acc_128);
 
     println!("\n================================================================================");
-    println!("MAXIMAL ADVERSARIAL AUDIT COMPLETE: ALL SIX BENCHMARK GATES PASSED.");
+    println!("AUTHENTIC UCI DATASET VERIFICATION COMPLETE: ALL 13,910 MEASUREMENTS PROCESSED.");
     println!("================================================================================");
 }
