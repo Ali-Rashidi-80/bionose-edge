@@ -26,24 +26,28 @@ pub struct WeberFechnerTransducer<const M: usize> {
     pub epsilon: f32,
     /// Minimum allowed physical resistance reading to prevent sensor short-circuit artifacts.
     pub r_min: f32,
+    /// ORN activation threshold (ln ratio): rejects sub-threshold ambient weather/humidity fluctuations.
+    pub activation_threshold: f32,
 }
 
 impl<const M: usize> WeberFechnerTransducer<M> {
-    /// Creates a new transducer with initial clean-air baselines.
-    pub const fn new(default_r0: f32, epsilon: f32) -> Self {
+    /// Creates a new transducer with initial clean-air baselines and activation threshold.
+    pub const fn new(default_r0: f32, epsilon: f32, activation_threshold: f32) -> Self {
         Self {
             r0: [default_r0; M],
             epsilon,
             r_min: 1.0, // 1 Ohm floor
+            activation_threshold,
         }
     }
 
     /// Creates a new transducer with channel-specific baseline resistances.
-    pub const fn with_baselines(r0: [f32; M], epsilon: f32) -> Self {
+    pub const fn with_baselines(r0: [f32; M], epsilon: f32, activation_threshold: f32) -> Self {
         Self {
             r0,
             epsilon,
             r_min: 1.0,
+            activation_threshold,
         }
     }
 
@@ -67,18 +71,17 @@ impl<const M: usize> WeberFechnerTransducer<M> {
 
     /// Transforms raw sensor resistances into logarithmic relative conductance.
     ///
-    /// Output vector s has dimension M:
-    /// s_i = ln( (R_{0,i} / max(R_i, r_min)) + epsilon )
+    /// Sub-threshold weather fluctuations (ln(R0/R) < activation_threshold) are zeroed out,
+    /// mimicking insect olfactory receptor neuron (ORN) chemical binding affinity thresholds.
     pub fn transduce(&self, raw_resistances: &[f32; M]) -> [f32; M] {
         let mut s = [0.0f32; M];
         for i in 0..M {
             let r = raw_resistances[i].max(self.r_min);
             let r0 = self.r0[i].max(self.r_min);
             let ratio = (r0 / r) + self.epsilon;
-            // ln(ratio): when R == R0, ratio ~ 1.0, ln ~ 0.0.
-            // When gas reduces resistance (R < R0), ratio > 1.0, ln > 0.0.
             let val = math_ln(ratio);
-            s[i] = if val < 0.0 { 0.0 } else { val };
+            let gated = val - self.activation_threshold;
+            s[i] = if gated < 0.0 { 0.0 } else { gated };
         }
         s
     }
@@ -90,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_clean_air_near_zero() {
-        let transducer = WeberFechnerTransducer::<4>::new(10_000.0, 1e-6);
+        let transducer = WeberFechnerTransducer::<4>::new(10_000.0, 1e-6, 0.0);
         let clean_air = [10_000.0; 4];
         let s = transducer.transduce(&clean_air);
         for &val in &s {
@@ -100,7 +103,7 @@ mod tests {
 
     #[test]
     fn test_reducing_gas_positive_conductance() {
-        let transducer = WeberFechnerTransducer::<4>::new(10_000.0, 1e-6);
+        let transducer = WeberFechnerTransducer::<4>::new(10_000.0, 1e-6, 0.0);
         // Resistance drops to 2,000 Ohms (gas presence)
         let gas_exposure = [2_000.0, 5_000.0, 10_000.0, 1_000.0];
         let s = transducer.transduce(&gas_exposure);

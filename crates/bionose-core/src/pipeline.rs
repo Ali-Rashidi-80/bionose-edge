@@ -14,7 +14,9 @@ use crate::weber_fechner::WeberFechnerTransducer;
 pub struct BioNoseConfig {
     pub default_r0: f32,
     pub epsilon: f32,
+    pub orn_activation_threshold: f32,
     pub sigma: f32,
+    pub lateral_inhibition_strength: f32,
     pub seed: u64,
     pub top_ratio: f32,
     pub noise_energy_threshold: f32,
@@ -29,7 +31,9 @@ impl BioNoseConfig {
         Self {
             default_r0: 50_000.0,
             epsilon: 1e-6,
+            orn_activation_threshold: 0.25,
             sigma: 0.05,
+            lateral_inhibition_strength: 0.85,
             seed: 0x4452_4f53_4f50_4849, // "DROSOPHI"
             top_ratio: 0.05,             // 5% active Kenyon cells
             noise_energy_threshold: 0.08,
@@ -72,8 +76,12 @@ impl<
     /// Creates a new engine instance from configuration parameters.
     pub fn new(config: &BioNoseConfig) -> Self {
         Self {
-            transducer: WeberFechnerTransducer::new(config.default_r0, config.epsilon),
-            antennal_lobe: AntennalLobe::new(config.sigma),
+            transducer: WeberFechnerTransducer::new(
+                config.default_r0,
+                config.epsilon,
+                config.orn_activation_threshold,
+            ),
+            antennal_lobe: AntennalLobe::new(config.sigma, config.lateral_inhibition_strength),
             mushroom_body: MushroomBody::new(
                 config.seed,
                 config.top_ratio,
@@ -137,7 +145,9 @@ mod tests {
         let config = BioNoseConfig {
             default_r0: 10_000.0,
             epsilon: 1e-6,
+            orn_activation_threshold: 0.05,
             sigma: 0.05,
+            lateral_inhibition_strength: 0.85,
             seed: 12345,
             top_ratio: 0.05,
             noise_energy_threshold: 0.05,
