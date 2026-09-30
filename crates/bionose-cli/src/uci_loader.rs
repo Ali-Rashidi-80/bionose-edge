@@ -100,6 +100,7 @@ pub fn load_all_batches_16(dir: &Path) -> Result<Vec<UciBatch<16>>, std::io::Err
 }
 
 /// Loads a single batch with all 128 dynamic + steady-state features.
+#[allow(dead_code)]
 pub fn load_batch_128(path: &Path, batch_id: usize) -> Result<UciBatch<128>, std::io::Error> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
@@ -147,6 +148,7 @@ pub fn load_batch_128(path: &Path, batch_id: usize) -> Result<UciBatch<128>, std
 }
 
 /// Loads all 10 batches with all 128 features (M=128).
+#[allow(dead_code)]
 pub fn load_all_batches_128(dir: &Path) -> Result<Vec<UciBatch<128>>, std::io::Error> {
     let mut batches = Vec::new();
     for batch_id in 1..=10 {
