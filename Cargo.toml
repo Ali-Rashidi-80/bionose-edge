@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/bionose-core",
+    "crates/bionose-cli",
+]
+resolver = "2"

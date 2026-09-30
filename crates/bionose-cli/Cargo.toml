@@ -1,0 +1,10 @@
+[package]
+name = "bionose-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ali Rashidi"]
+description = "Desktop CLI runner and benchmark harness for BioNose-Edge"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+bionose-core = { path = "../bionose-core" }

@@ -1,0 +1,14 @@
+[package]
+name = "bionose-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ali Rashidi"]
+description = "Neuromorphic on-device olfactory engine inspired by Drosophila melanogaster antennal lobe and mushroom body (no_std, zero-alloc)"
+license = "MIT OR Apache-2.0"
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+libm = "0.2"
