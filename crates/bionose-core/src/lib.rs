@@ -10,6 +10,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub mod adaptive_engine;
 pub mod antennal_lobe;
 pub mod mbon_readout;
 pub mod modbus;
@@ -18,6 +19,7 @@ pub mod pipeline;
 pub mod weber_fechner;
 
 // Re-exports for clean ergonomics
+pub use adaptive_engine::{AdaptiveNoseConfig, AdaptiveNoseEngine, AdaptiveReadoutResult};
 pub use antennal_lobe::AntennalLobe;
 pub use mbon_readout::{MbonAssociator, ReadoutResult};
 pub use modbus::{BioNoseTelemetry, ModbusException, ModbusSlave};

@@ -25,10 +25,10 @@ const KC_16: usize = 256;
 const SYNAPSES_16: usize = 4;
 const WORDS_16: usize = 4;
 
-// KC sizing for M=128
-const KC_128: usize = 512;
+// KC sizing for M=128: Scale to Full Biological Drosophila Scale (2,048 Kenyon Cells)
+const KC_128: usize = 2048;
 const SYNAPSES_128: usize = 6;
-const WORDS_128: usize = 8;
+const WORDS_128: usize = 32; // 2048 / 64 = 32
 
 #[allow(dead_code)]
 const GAS_NAMES: [&str; NUM_CLASSES] = [
