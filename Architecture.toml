@@ -1,0 +1,16 @@
+# BioNose-Edge architecture invariants — checked during verification
+
+[layout]
+required_dirs = [
+    "crates/bionose-core",
+    "crates/bionose-cli",
+    "assets",
+    "docs/adr",
+]
+
+[invariants]
+# bionose-core MUST remain strictly #![no_std], zero heap allocations, zero external runtime
+"crates/bionose-core/**" = { forbidden_crates = ["std", "alloc"], forbidden_calls = ["panic!", "abort"] }
+
+# bionose-cli handles file I/O, dataset parsing, and terminal reporting
+"crates/bionose-cli/**" = { required_crates = ["bionose-core"] }
