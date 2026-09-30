@@ -18,7 +18,7 @@
 [![آزمون تجربی](https://img.shields.io/badge/%D8%AF%DB%8C%D8%AA%D8%A7%D8%B3%D8%AA-13%2C910%20%D9%86%D9%85%D9%88%D9%86%D9%87%20UCI-147A8A.svg)](#نتایج-بنچمارک-فیزیکی-دیتاست-uci)
 [![پروتکل صنعتی](https://img.shields.io/badge/%D9%BE%D8%B1%D9%88%D8%AA%DA%A9%D9%84-Modbus%20RTU%20%2F%20RS485-3ECFB2.svg)](#مشخصات-پروتکل-صنعتی-modbus-rtu)
 
-`crates/bionose-core` · `crates/bionose-cli` · [معماری](ARCHITECTURE.fa.md) · [آمادگی تولید](PRODUCTION_READINESS.md) · [سند تصمیم‌گیری ADR-002](docs/adr/adr_002_drosophila_falsification_and_hybrid_pivot.md) · [نصب](INSTALL.fa.md)
+`crates/bionose-core` · `crates/bionose-cli` · [معماری](ARCHITECTURE.fa.md) · [آمادگی تولید](PRODUCTION_READINESS.md) · [سند تصمیم‌گیری ADR-002](docs/adr/adr_002_drosophila_falsification_and_hybrid_pivot.md) · [نصب](INSTALL.fa.md) · [کاربردها](docs/APPLICATIONS.fa.md)
 
 <br/>
 
@@ -384,6 +384,8 @@ bionose-edge/
 │       └── data/Dataset/           # ۱۰ بچ آزمایشگاهی دیتاست فیزیکی ۳ ساله
 │
 ├── docs/
+│   ├── APPLICATIONS.md             # راهنمای کاربردهای صنعتی و اینترنت اشیا (انگلیسی)
+│   ├── APPLICATIONS.fa.md          # راهنمای جامع کاربردها و غربالگری ایده‌ها (فارسی)
 │   └── adr/
 │       ├── adr_001_drosophila_architecture.md
 │       └── adr_002_drosophila_falsification_and_hybrid_pivot.md
@@ -417,6 +419,8 @@ bionose-edge/
 | [**PRODUCTION_READINESS.md**](PRODUCTION_READINESS.md) | انگلیسی | تابلوی امتیازات ده‌گانه کیفیت و مدارک ارزیابی زیرسیستم‌ها |
 | [**INSTALL.md**](INSTALL.md) | انگلیسی | راهنمای راه‌اندازی جعبه‌ابزار کراس‌کامپایل و استقرار فریم‌ور |
 | [**INSTALL.fa.md**](INSTALL.fa.md) | فارسی | راهنمای فارسی راه‌اندازی و بیلد برای ریزکنترل‌گرها |
+| [**APPLICATIONS.md**](docs/APPLICATIONS.md) | انگلیسی | راهنمای مهندسی کاربردهای صنعتی و غربالگری ایده‌ها |
+| [**APPLICATIONS.fa.md**](docs/APPLICATIONS.fa.md) | فارسی | راهنمای جامع کاربردهای اینترنت اشیا و سیستم‌های لبه (فارسی) |
 | [**ADR-002**](docs/adr/adr_002_drosophila_falsification_and_hybrid_pivot.md) | انگلیسی | سند ثبت تصمیم فنی پیرامون ابطال برتری باینری مغز حشره و رویکرد هیبرید |
 | [**CONTRIBUTING.md**](CONTRIBUTING.md) | انگلیسی | استانداردهای کدنویسی، آزمون‌های الزامی و گردش کار پول‌ریکوئست‌ها |
 | [**CONTRIBUTING.fa.md**](CONTRIBUTING.fa.md) | فارسی | راهنمای فارسی مشارکت و توسعه در پروژه |
