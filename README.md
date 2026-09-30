@@ -41,6 +41,7 @@
 - [Mathematical Pipeline](#mathematical-pipeline)
 - [Empirical Benchmarks (13,910 Physical Samples)](#empirical-benchmarks-13910-physical-samples)
 - [Modbus RTU / RS485 Specification](#modbus-rtu--rs485-specification)
+- [IoT & Low-Power Wireless Telemetry (LoRaWAN / NB-IoT)](#iot--low-power-wireless-telemetry-lorawan--nb-iot--deep-sleep)
 - [Hardware & Resource Footprint](#hardware--resource-footprint)
 - [Quick Start](#quick-start)
 - [Adversarial Stress-Testing](#adversarial-stress-testing)
@@ -233,6 +234,46 @@ The slave protocol engine operates entirely on fixed static buffers with sub-mic
 | **`0x0010`** | RW | `COMMAND_REGISTER` | `u16` | `0x0001`: Auto-Zero, `0x0002`: Field Adapt |
 
 ---
+
+---
+
+## IoT & Low-Power Wireless Telemetry (LoRaWAN / NB-IoT / Deep Sleep)
+
+Beyond wired RS485 Modbus networks, `BioNose-Edge` is uniquely optimized for **battery-operated, bandwidth-constrained wireless IoT nodes** (ESP32, STM32, nRF52, RP2040, RISC-V).
+
+### 1. Ultra-Compact 5-Byte Wireless Uplink
+Transmitting raw 16-channel floating-point ADC readings over LoRaWAN or NB-IoT exhausts limited airtime budgets and battery capacity. `BioNose-Edge` executes 100% of mathematical transduction and inference locally on-device, compressing the state into a fixed **5-byte payload**:
+
+| Byte Offset | Field | Type | Scale / Range | Purpose |
+| :---: | :--- | :---: | :---: | :--- |
+| **0** | `GAS_CLASS_OR_NOVELTY` | `u8` | `0`: Clean Air, `1..6`: Gas ID, `0xFF`: Novel Odor | Target chemical classification |
+| **1..2** | `CONFIDENCE_BPS` | `u16` (BE) | `0 .. 10000` (`8450` = 84.50%) | Identification certainty |
+| **3** | `INFERENCE_LATENCY_US` | `u8` | `0 .. 255` $\mu$s | Edge execution time telemetry |
+| **4** | `DRIFT_INDEX` | `u8` | `0 .. 255` | Remote sensor aging index for predictive maintenance |
+
+```rust
+// Compact 5-byte packing for LoRaWAN / NB-IoT / BLE advertisements
+let uplink: [u8; 5] = [
+    if result.is_novel { 0xFF } else { result.best_class as u8 },
+    (result.confidence_basis_points >> 8) as u8,
+    (result.confidence_basis_points & 0xFF) as u8,
+    result.latency_micros.min(255) as u8,
+    (engine.drift_degradation_index() & 0xFF) as u8,
+];
+```
+
+### 2. Multi-Year Battery Life (Deep-Sleep Power Budget)
+Because inference executes in **1.8 microseconds** (Xtensa LX7 @ 240 MHz) or **~14 microseconds** (ARM Cortex-M4 @ 32 MHz low-power clock), battery-powered nodes can remain in sub-10 $\mu$A deep sleep, waking briefly only to sample and infer:
+
+```text
+[Deep Sleep (< 10 uA)] ──► [ADC Sampling (25 us)] ──► [BioNose-Edge (1.8 us)] ──► [Return to Deep Sleep]
+```
+
+### 3. Production Edge & IoT Verticals
+
+1. **BESS & Electrical Switchgear Early Arc Warning:** Detects off-gassing (hydrogen, carbon monoxide, electrolyte solvent vapors) before thermal runaway or smoke occurs, operating via wired RS485 or wireless mesh.
+2. **Cold Chain & Perishable Logistics:** Monitors ethylene and ethanol gas spoilage in refrigerated shipping containers across weeks of transit on a single coin-cell battery.
+3. **Remote Pipeline & Hazardous Gas Monitoring:** Autonomous solar/battery LoRaWAN nodes detecting volatile organic compounds (VOCs) and chemical leaks with zero cloud dependency.
 
 ## Hardware & Resource Footprint
 
