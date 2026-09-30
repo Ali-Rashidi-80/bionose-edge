@@ -39,8 +39,7 @@ pub fn load_batch_16(path: &Path, batch_id: usize) -> Result<UciBatch<16>, std::
 
     // The 16 steady-state feature indices in 1-based indexing: 1, 9, 17, 25, 33, 41, 49, 57, 65, 73, 81, 89, 97, 105, 113, 121
     let ss_indices: [usize; 16] = [
-        1, 9, 17, 25, 33, 41, 49, 57,
-        65, 73, 81, 89, 97, 105, 113, 121,
+        1, 9, 17, 25, 33, 41, 49, 57, 65, 73, 81, 89, 97, 105, 113, 121,
     ];
 
     for line in reader.lines() {
@@ -81,7 +80,10 @@ pub fn load_batch_16(path: &Path, batch_id: usize) -> Result<UciBatch<16>, std::
             }
         }
 
-        samples.push(UciSample { class_idx, features });
+        samples.push(UciSample {
+            class_idx,
+            features,
+        });
     }
 
     Ok(UciBatch { batch_id, samples })
@@ -134,14 +136,17 @@ pub fn load_batch_128(path: &Path, batch_id: usize) -> Result<UciBatch<128>, std
         for token in parts {
             if let Some((idx_str, val_str)) = token.split_once(':') {
                 if let (Ok(idx), Ok(val)) = (idx_str.parse::<usize>(), val_str.parse::<f32>()) {
-                    if idx >= 1 && idx <= 128 {
+                    if (1..=128).contains(&idx) {
                         features[idx - 1] = val.abs();
                     }
                 }
             }
         }
 
-        samples.push(UciSample { class_idx, features });
+        samples.push(UciSample {
+            class_idx,
+            features,
+        });
     }
 
     Ok(UciBatch { batch_id, samples })

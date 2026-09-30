@@ -108,11 +108,16 @@ pub struct MushroomBody<const M: usize, const K: usize, const D: usize, const WO
     pub noise_energy_threshold: f32,
 }
 
-impl<const M: usize, const K: usize, const D: usize, const WORDS: usize> MushroomBody<M, K, D, WORDS> {
+impl<const M: usize, const K: usize, const D: usize, const WORDS: usize>
+    MushroomBody<M, K, D, WORDS>
+{
     /// Creates a new Mushroom Body with deterministic wiring and specified sparsity ratio.
     pub fn new(seed: u64, top_ratio: f32, noise_energy_threshold: f32) -> Self {
         // Assert compile-time word size
-        debug_assert!(WORDS >= (K + 63) / 64, "WORDS buffer must be sufficient to hold K bits");
+        debug_assert!(
+            WORDS >= K.div_ceil(64),
+            "WORDS buffer must be sufficient to hold K bits"
+        );
         Self {
             projection: ProjectionMatrix::generate_deterministic(seed),
             top_ratio,
@@ -238,6 +243,9 @@ mod tests {
         let active_input = [2.0, 1.5, 0.2, 0.8, 3.0, 0.0, 1.1, 0.5];
         let mask = mb.forward(&active_input);
         let total_active = mask[0].count_ones() + mask[1].count_ones();
-        assert_eq!(total_active, 6, "Expected exactly 6 active Kenyon cells for 5% of 128");
+        assert_eq!(
+            total_active, 6,
+            "Expected exactly 6 active Kenyon cells for 5% of 128"
+        );
     }
 }

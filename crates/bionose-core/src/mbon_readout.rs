@@ -49,7 +49,11 @@ pub struct MbonAssociator<const K: usize, const C: usize, const WORDS: usize> {
 
 impl<const K: usize, const C: usize, const WORDS: usize> MbonAssociator<K, C, WORDS> {
     /// Creates a new MBON associator initialized with zero weights and specified thresholds.
-    pub const fn new(novelty_threshold: f32, habituation_rate: f32, habituation_strength: f32) -> Self {
+    pub const fn new(
+        novelty_threshold: f32,
+        habituation_rate: f32,
+        habituation_strength: f32,
+    ) -> Self {
         Self {
             weights: [[0.0f32; K]; C],
             habituation_trace: [0.0f32; K],
@@ -89,7 +93,8 @@ impl<const K: usize, const C: usize, const WORDS: usize> MbonAssociator<K, C, WO
                     let k = w * 64 + bit_idx;
                     if k < K {
                         // Apply habituation suppression
-                        let effective_act = (1.0 - self.habituation_strength * self.habituation_trace[k]).max(0.0);
+                        let effective_act =
+                            (1.0 - self.habituation_strength * self.habituation_trace[k]).max(0.0);
                         score += self.weights[c][k] * effective_act;
                     }
                     word &= word - 1; // Clear least significant bit
@@ -141,7 +146,8 @@ impl<const K: usize, const C: usize, const WORDS: usize> MbonAssociator<K, C, WO
                 if k < K {
                     let a_k = 1.0f32;
                     let delta_w = eta * (a_k - current_score * self.weights[target_class][k]);
-                    self.weights[target_class][k] = (self.weights[target_class][k] + delta_w).max(0.0);
+                    self.weights[target_class][k] =
+                        (self.weights[target_class][k] + delta_w).max(0.0);
                 }
                 word &= word - 1;
             }
@@ -170,7 +176,8 @@ impl<const K: usize, const C: usize, const WORDS: usize> MbonAssociator<K, C, WO
                 let bit_idx = word.trailing_zeros() as usize;
                 let k = w * 64 + bit_idx;
                 if k < K {
-                    self.habituation_trace[k] = (1.0 - self.habituation_rate) * self.habituation_trace[k]
+                    self.habituation_trace[k] = (1.0 - self.habituation_rate)
+                        * self.habituation_trace[k]
                         + self.habituation_rate * 1.0;
                 }
                 word &= word - 1;

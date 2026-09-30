@@ -55,13 +55,7 @@ impl<const M: usize> WeberFechnerTransducer<M> {
     ///
     /// alpha: adaptation rate (e.g. 0.05 for slow baseline tracking).
     pub fn update_baseline(&mut self, fresh_air_resistances: &[f32; M], alpha: f32) {
-        let alpha = if alpha < 0.0 {
-            0.0
-        } else if alpha > 1.0 {
-            1.0
-        } else {
-            alpha
-        };
+        let alpha = alpha.clamp(0.0, 1.0);
 
         for i in 0..M {
             let r = fresh_air_resistances[i].max(self.r_min);
@@ -97,7 +91,10 @@ mod tests {
         let clean_air = [10_000.0; 4];
         let s = transducer.transduce(&clean_air);
         for &val in &s {
-            assert!(val >= 0.0 && val < 0.01, "Clean air should yield near-zero response");
+            assert!(
+                val >= 0.0 && val < 0.01,
+                "Clean air should yield near-zero response"
+            );
         }
     }
 

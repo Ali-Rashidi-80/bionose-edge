@@ -212,13 +212,7 @@ impl<const M: usize, const C: usize> AdaptiveNoseEngine<M, C> {
         let s = self.transducer.transduce(raw_resistances);
         let y = self.antennal_lobe.normalize(&s);
 
-        let alpha = if alpha < 0.0 {
-            0.0
-        } else if alpha > 1.0 {
-            1.0
-        } else {
-            alpha
-        };
+        let alpha = alpha.clamp(0.0, 1.0);
 
         for i in 0..M {
             self.centroids[target_class][i] =

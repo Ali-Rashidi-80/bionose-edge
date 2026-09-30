@@ -141,17 +141,29 @@ impl ModbusSlave {
             // 0x03: Read Holding Registers
             0x03 => {
                 if rx_buf.len() != 8 {
-                    response_len = self.build_exception(tx_buf, function_code, ModbusException::IllegalDataValue);
+                    response_len = self.build_exception(
+                        tx_buf,
+                        function_code,
+                        ModbusException::IllegalDataValue,
+                    );
                 } else {
                     let start_addr = ((rx_buf[2] as u16) << 8) | (rx_buf[3] as u16);
                     let reg_count = ((rx_buf[4] as u16) << 8) | (rx_buf[5] as u16);
 
                     if reg_count == 0 || reg_count > 16 {
-                        response_len = self.build_exception(tx_buf, function_code, ModbusException::IllegalDataValue);
+                        response_len = self.build_exception(
+                            tx_buf,
+                            function_code,
+                            ModbusException::IllegalDataValue,
+                        );
                     } else {
                         let byte_count = (reg_count * 2) as u8;
                         if tx_buf.len() < (5 + byte_count as usize) {
-                            response_len = self.build_exception(tx_buf, function_code, ModbusException::SlaveDeviceFailure);
+                            response_len = self.build_exception(
+                                tx_buf,
+                                function_code,
+                                ModbusException::SlaveDeviceFailure,
+                            );
                         } else {
                             tx_buf[0] = self.slave_address;
                             tx_buf[1] = 0x03;
@@ -167,7 +179,8 @@ impl ModbusSlave {
                                         offset += 2;
                                     }
                                     Err(exc) => {
-                                        response_len = self.build_exception(tx_buf, function_code, exc);
+                                        response_len =
+                                            self.build_exception(tx_buf, function_code, exc);
                                         ok = false;
                                         break;
                                     }
@@ -189,7 +202,11 @@ impl ModbusSlave {
             // 0x06: Write Single Register
             0x06 => {
                 if rx_buf.len() != 8 {
-                    response_len = self.build_exception(tx_buf, function_code, ModbusException::IllegalDataValue);
+                    response_len = self.build_exception(
+                        tx_buf,
+                        function_code,
+                        ModbusException::IllegalDataValue,
+                    );
                 } else {
                     let addr = ((rx_buf[2] as u16) << 8) | (rx_buf[3] as u16);
                     let val = ((rx_buf[4] as u16) << 8) | (rx_buf[5] as u16);
@@ -212,7 +229,8 @@ impl ModbusSlave {
 
             // Unsupported function code
             _ => {
-                response_len = self.build_exception(tx_buf, function_code, ModbusException::IllegalFunction);
+                response_len =
+                    self.build_exception(tx_buf, function_code, ModbusException::IllegalFunction);
             }
         }
 
@@ -258,14 +276,16 @@ mod tests {
         req[7] = (crc >> 8) as u8;
 
         let mut tx_buf = [0u8; 64];
-        let len = slave.process_frame(&req, &mut telemetry, &mut tx_buf).expect("Frame valid");
+        let len = slave
+            .process_frame(&req, &mut telemetry, &mut tx_buf)
+            .expect("Frame valid");
 
         // Response should be: [0x01, 0x03, 0x06, 0x00, 0x03, 0x21, 0x02, 0x00, 0x00, CRC_lo, CRC_hi]
         assert_eq!(len, 11);
         assert_eq!(tx_buf[0], 0x01);
         assert_eq!(tx_buf[1], 0x03);
         assert_eq!(tx_buf[2], 0x06); // 6 bytes of data
-        // Register 0x0002 = 3
+                                     // Register 0x0002 = 3
         assert_eq!(tx_buf[3], 0x00);
         assert_eq!(tx_buf[4], 0x03);
         // Register 0x0003 = 8450 (0x2102)
@@ -288,7 +308,9 @@ mod tests {
         req[7] = (crc >> 8) as u8;
 
         let mut tx_buf = [0u8; 64];
-        let len = slave.process_frame(&req, &mut telemetry, &mut tx_buf).expect("Frame valid");
+        let len = slave
+            .process_frame(&req, &mut telemetry, &mut tx_buf)
+            .expect("Frame valid");
 
         assert_eq!(len, 8);
         assert_eq!(telemetry.command_register, 0x0001);

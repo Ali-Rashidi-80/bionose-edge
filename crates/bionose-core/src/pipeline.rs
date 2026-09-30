@@ -66,13 +66,9 @@ pub struct BioNoseEngine<
     pub mbon: MbonAssociator<K, C, WORDS>,
 }
 
-impl<
-    const M: usize,
-    const K: usize,
-    const D: usize,
-    const C: usize,
-    const WORDS: usize,
-> BioNoseEngine<M, K, D, C, WORDS> {
+impl<const M: usize, const K: usize, const D: usize, const C: usize, const WORDS: usize>
+    BioNoseEngine<M, K, D, C, WORDS>
+{
     /// Creates a new engine instance from configuration parameters.
     pub fn new(config: &BioNoseConfig) -> Self {
         Self {
@@ -131,7 +127,8 @@ impl<
 
     /// Updates clean-air baseline resistances to track seasonal or thermal sensor drift.
     pub fn update_baseline(&mut self, clean_air_resistances: &[f32; M], alpha: f32) {
-        self.transducer.update_baseline(clean_air_resistances, alpha);
+        self.transducer
+            .update_baseline(clean_air_resistances, alpha);
     }
 }
 
@@ -159,9 +156,13 @@ mod tests {
         let mut engine = BioNoseEngine::<8, 128, 2, 3, 2>::new(&config);
 
         // Odor 1: Sensor 0 strongly activated
-        let odor_1 = [1_000.0, 9_500.0, 9_800.0, 10_000.0, 10_000.0, 10_000.0, 10_000.0, 10_000.0];
+        let odor_1 = [
+            1_000.0, 9_500.0, 9_800.0, 10_000.0, 10_000.0, 10_000.0, 10_000.0, 10_000.0,
+        ];
         // Odor 2: Sensor 7 strongly activated
-        let odor_2 = [10_000.0, 10_000.0, 10_000.0, 10_000.0, 10_000.0, 9_800.0, 9_500.0, 1_000.0];
+        let odor_2 = [
+            10_000.0, 10_000.0, 10_000.0, 10_000.0, 10_000.0, 9_800.0, 9_500.0, 1_000.0,
+        ];
 
         // Before training, Odor 1 is novel
         let (res_pre, _) = engine.infer(&odor_1);

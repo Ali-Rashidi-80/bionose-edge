@@ -22,8 +22,14 @@ fn test_sensor_fault_injection_short_circuit_immunity() {
     // Must execute cleanly without panic, NaN, or Inf
     let result = engine.infer(&dead_short);
     assert!(!result.similarity.is_nan(), "Similarity must not be NaN");
-    assert!(!result.similarity.is_infinite(), "Similarity must not be Infinite");
-    assert!(!result.signal_magnitude.is_nan(), "Magnitude must not be NaN");
+    assert!(
+        !result.similarity.is_infinite(),
+        "Similarity must not be Infinite"
+    );
+    assert!(
+        !result.signal_magnitude.is_nan(),
+        "Magnitude must not be NaN"
+    );
 }
 
 #[test]
@@ -60,11 +66,17 @@ fn test_modbus_adversarial_crc_corruption_silent_drop() {
     // 2. Corrupt 1 bit in CRC
     req[6] ^= 0x01;
     let corrupted_res = slave.process_frame(&req, &mut telemetry, &mut tx_buf);
-    assert_eq!(corrupted_res, None, "Corrupted CRC frame must be dropped silently per Modbus spec");
+    assert_eq!(
+        corrupted_res, None,
+        "Corrupted CRC frame must be dropped silently per Modbus spec"
+    );
 
     // 3. Truncated frame (less than 4 bytes)
     let truncated = [0x01, 0x03];
-    assert_eq!(slave.process_frame(&truncated, &mut telemetry, &mut tx_buf), None);
+    assert_eq!(
+        slave.process_frame(&truncated, &mut telemetry, &mut tx_buf),
+        None
+    );
 }
 
 #[test]
@@ -102,7 +114,9 @@ fn test_modbus_adversarial_illegal_function_code() {
     req[6] = (crc & 0xFF) as u8;
     req[7] = (crc >> 8) as u8;
 
-    let len = slave.process_frame(&req, &mut telemetry, &mut tx_buf).expect("Handled");
+    let len = slave
+        .process_frame(&req, &mut telemetry, &mut tx_buf)
+        .expect("Handled");
     assert_eq!(len, 5);
     assert_eq!(tx_buf[1], 0x17 | 0x80); // 0x97
     assert_eq!(tx_buf[2], ModbusException::IllegalFunction as u8);
@@ -120,7 +134,9 @@ fn test_modbus_adversarial_illegal_address() {
     req[6] = (crc & 0xFF) as u8;
     req[7] = (crc >> 8) as u8;
 
-    let len = slave.process_frame(&req, &mut telemetry, &mut tx_buf).expect("Handled");
+    let len = slave
+        .process_frame(&req, &mut telemetry, &mut tx_buf)
+        .expect("Handled");
     assert_eq!(len, 5);
     assert_eq!(tx_buf[1], 0x83);
     assert_eq!(tx_buf[2], ModbusException::IllegalDataAddress as u8);
@@ -155,9 +171,18 @@ fn test_continual_adaptation_long_term_numerical_stability() {
 
     // Verify centroids never diverged, overflowed, or produced NaN
     for i in 0..4 {
-        assert!(!engine.centroids[0][i].is_nan(), "Centroid must remain valid");
-        assert!(!engine.centroids[0][i].is_infinite(), "Centroid must remain finite");
-        assert!(engine.centroids[0][i] >= 0.0, "Centroid components must remain non-negative");
+        assert!(
+            !engine.centroids[0][i].is_nan(),
+            "Centroid must remain valid"
+        );
+        assert!(
+            !engine.centroids[0][i].is_infinite(),
+            "Centroid must remain finite"
+        );
+        assert!(
+            engine.centroids[0][i] >= 0.0,
+            "Centroid components must remain non-negative"
+        );
     }
 
     // Test inference after 10,000 cycles
@@ -200,7 +225,9 @@ fn test_end_to_end_adaptive_pipeline_with_modbus_telemetry() {
     req[7] = (crc >> 8) as u8;
 
     let mut tx_buf = [0u8; 32];
-    let len = slave.process_frame(&req, &mut telemetry, &mut tx_buf).expect("Processed");
+    let len = slave
+        .process_frame(&req, &mut telemetry, &mut tx_buf)
+        .expect("Processed");
     assert_eq!(len, 9); // [Slave, Func, ByteCount(4), RegHi, RegLo, RegHi, RegLo, CRC, CRC]
     assert_eq!(tx_buf[3], 0x00);
     assert_eq!(tx_buf[4], 0x02); // Gas Class = 2

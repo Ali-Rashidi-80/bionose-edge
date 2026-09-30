@@ -7,14 +7,14 @@
 //! 3. Static Baselines (Euclidean, Cosine, Shuffled, BioNose) frozen on Batch 1.
 //! 4. Full Dynamic (M=128) and Steady-State (M=16) evaluated side-by-side on all 13,910 real physical samples.
 
+#![allow(clippy::needless_range_loop)]
+
 mod uci_loader;
 
-use bionose_core::{
-    BioNoseConfig, BioNoseEngine, BioNoseTelemetry, ModbusSlave, ProjectionMatrix,
-};
+use bionose_core::{BioNoseConfig, BioNoseEngine, BioNoseTelemetry, ModbusSlave, ProjectionMatrix};
 use std::path::Path;
 use std::time::Instant;
-use uci_loader::{load_all_batches_16, load_all_batches_128};
+use uci_loader::{load_all_batches_128, load_all_batches_16};
 
 const NUM_SENSORS_16: usize = 16;
 const NUM_FEATURES_128: usize = 128;
@@ -58,14 +58,16 @@ impl<const M: usize, const C: usize> EuclideanClassifier<M, C> {
     fn train(&mut self, features: &[f32; M], class_idx: usize) {
         let n = self.counts[class_idx] as f32;
         for i in 0..M {
-            self.centroids[class_idx][i] = (self.centroids[class_idx][i] * n + features[i]) / (n + 1.0);
+            self.centroids[class_idx][i] =
+                (self.centroids[class_idx][i] * n + features[i]) / (n + 1.0);
         }
         self.counts[class_idx] += 1;
     }
 
     fn adapt_ema(&mut self, features: &[f32; M], class_idx: usize, alpha: f32) {
         for i in 0..M {
-            self.centroids[class_idx][i] = (1.0 - alpha) * self.centroids[class_idx][i] + alpha * features[i];
+            self.centroids[class_idx][i] =
+                (1.0 - alpha) * self.centroids[class_idx][i] + alpha * features[i];
         }
         self.counts[class_idx] += 1;
     }
@@ -74,7 +76,9 @@ impl<const M: usize, const C: usize> EuclideanClassifier<M, C> {
         let mut min_dist = f32::MAX;
         let mut best_class = 0;
         for c in 0..C {
-            if self.counts[c] == 0 { continue; }
+            if self.counts[c] == 0 {
+                continue;
+            }
             let mut dist_sq = 0.0f32;
             for i in 0..M {
                 let diff = features[i] - self.centroids[c][i];
@@ -107,14 +111,16 @@ impl<const M: usize, const C: usize> CosineClassifier<M, C> {
     fn train(&mut self, features: &[f32; M], class_idx: usize) {
         let n = self.counts[class_idx] as f32;
         for i in 0..M {
-            self.centroids[class_idx][i] = (self.centroids[class_idx][i] * n + features[i]) / (n + 1.0);
+            self.centroids[class_idx][i] =
+                (self.centroids[class_idx][i] * n + features[i]) / (n + 1.0);
         }
         self.counts[class_idx] += 1;
     }
 
     fn adapt_ema(&mut self, features: &[f32; M], class_idx: usize, alpha: f32) {
         for i in 0..M {
-            self.centroids[class_idx][i] = (1.0 - alpha) * self.centroids[class_idx][i] + alpha * features[i];
+            self.centroids[class_idx][i] =
+                (1.0 - alpha) * self.centroids[class_idx][i] + alpha * features[i];
         }
         self.counts[class_idx] += 1;
     }
@@ -129,7 +135,9 @@ impl<const M: usize, const C: usize> CosineClassifier<M, C> {
         let feat_norm = feat_norm.sqrt().max(1e-6);
 
         for c in 0..C {
-            if self.counts[c] == 0 { continue; }
+            if self.counts[c] == 0 {
+                continue;
+            }
             let mut dot = 0.0f32;
             let mut c_norm = 0.0f32;
             for i in 0..M {
@@ -161,8 +169,8 @@ fn main() {
     };
 
     let batch_labels = [
-        "M 01-02", "M 03-04", "M 05-08", "M 09-10", "M 11   ",
-        "M 12-14", "M 15-18", "M 19-21", "M 22-30", "M 36   ",
+        "M 01-02", "M 03-04", "M 05-08", "M 09-10", "M 11   ", "M 12-14", "M 15-18", "M 19-21",
+        "M 22-30", "M 36   ",
     ];
 
     // =========================================================================
@@ -208,19 +216,25 @@ fn main() {
     let mut cosine_static_16 = CosineClassifier::<NUM_SENSORS_16, NUM_CLASSES>::new();
     let mut cosine_continual_16 = CosineClassifier::<NUM_SENSORS_16, NUM_CLASSES>::new();
 
-    let mut bionose_static_16 = BioNoseEngine::<NUM_SENSORS_16, KC_16, SYNAPSES_16, NUM_CLASSES, WORDS_16>::new(&config_16);
+    let mut bionose_static_16 =
+        BioNoseEngine::<NUM_SENSORS_16, KC_16, SYNAPSES_16, NUM_CLASSES, WORDS_16>::new(&config_16);
     bionose_static_16.transducer.r0 = baseline_r0_16;
 
-    let mut bionose_continual_16 = BioNoseEngine::<NUM_SENSORS_16, KC_16, SYNAPSES_16, NUM_CLASSES, WORDS_16>::new(&config_16);
+    let mut bionose_continual_16 =
+        BioNoseEngine::<NUM_SENSORS_16, KC_16, SYNAPSES_16, NUM_CLASSES, WORDS_16>::new(&config_16);
     bionose_continual_16.transducer.r0 = baseline_r0_16;
 
-    let mut shuffled_static_16 = BioNoseEngine::<NUM_SENSORS_16, KC_16, SYNAPSES_16, NUM_CLASSES, WORDS_16>::new(&config_16);
+    let mut shuffled_static_16 =
+        BioNoseEngine::<NUM_SENSORS_16, KC_16, SYNAPSES_16, NUM_CLASSES, WORDS_16>::new(&config_16);
     shuffled_static_16.transducer.r0 = baseline_r0_16;
-    shuffled_static_16.mushroom_body.projection = ProjectionMatrix::generate_shuffled_control(0xDEAD_BEEF_CAFE_BABE);
+    shuffled_static_16.mushroom_body.projection =
+        ProjectionMatrix::generate_shuffled_control(0xDEAD_BEEF_CAFE_BABE);
 
-    let mut shuffled_continual_16 = BioNoseEngine::<NUM_SENSORS_16, KC_16, SYNAPSES_16, NUM_CLASSES, WORDS_16>::new(&config_16);
+    let mut shuffled_continual_16 =
+        BioNoseEngine::<NUM_SENSORS_16, KC_16, SYNAPSES_16, NUM_CLASSES, WORDS_16>::new(&config_16);
     shuffled_continual_16.transducer.r0 = baseline_r0_16;
-    shuffled_continual_16.mushroom_body.projection = ProjectionMatrix::generate_shuffled_control(0xDEAD_BEEF_CAFE_BABE);
+    shuffled_continual_16.mushroom_body.projection =
+        ProjectionMatrix::generate_shuffled_control(0xDEAD_BEEF_CAFE_BABE);
 
     // Initial training on Batch 1 (20 samples per class)
     let mut init_trained = [0usize; NUM_CLASSES];
@@ -302,17 +316,29 @@ fn main() {
             let sample = &b.samples[idx];
             let c = sample.class_idx;
 
-            if euclidean_static_16.predict(&sample.features) == c { e_stat += 1; }
-            if euclidean_continual_16.predict(&sample.features) == c { e_cont += 1; }
+            if euclidean_static_16.predict(&sample.features) == c {
+                e_stat += 1;
+            }
+            if euclidean_continual_16.predict(&sample.features) == c {
+                e_cont += 1;
+            }
 
-            if cosine_static_16.predict(&sample.features) == c { c_stat += 1; }
-            if cosine_continual_16.predict(&sample.features) == c { c_cont += 1; }
+            if cosine_static_16.predict(&sample.features) == c {
+                c_stat += 1;
+            }
+            if cosine_continual_16.predict(&sample.features) == c {
+                c_cont += 1;
+            }
 
             let (s_res, _) = shuffled_continual_16.infer(&sample.features);
-            if !s_res.is_novel && s_res.best_class == c { s_cont += 1; }
+            if !s_res.is_novel && s_res.best_class == c {
+                s_cont += 1;
+            }
 
             let (b_res, _) = bionose_continual_16.infer(&sample.features);
-            if !b_res.is_novel && b_res.best_class == c { b_cont += 1; }
+            if !b_res.is_novel && b_res.best_class == c {
+                b_cont += 1;
+            }
         }
 
         let n = test_indices.len() as f32;
@@ -326,7 +352,9 @@ fn main() {
 
         println!(
             "B {:2} | {} | {:6} | {:9.1}% | {:12.1}% | {:9.1}% | {:12.1}% | {:13.1}% | {:16.1}%",
-            b.batch_id, batch_labels[b_idx], test_indices.len(),
+            b.batch_id,
+            batch_labels[b_idx],
+            test_indices.len(),
             (e_stat as f32 / n) * 100.0,
             (e_cont as f32 / n) * 100.0,
             (c_stat as f32 / n) * 100.0,
@@ -406,15 +434,25 @@ fn main() {
     let mut cosine_static_128 = CosineClassifier::<NUM_FEATURES_128, NUM_CLASSES>::new();
     let mut cosine_continual_128 = CosineClassifier::<NUM_FEATURES_128, NUM_CLASSES>::new();
 
-    let mut bionose_static_128 = BioNoseEngine::<NUM_FEATURES_128, KC_128, SYNAPSES_128, NUM_CLASSES, WORDS_128>::new(&config_128);
+    let mut bionose_static_128 =
+        BioNoseEngine::<NUM_FEATURES_128, KC_128, SYNAPSES_128, NUM_CLASSES, WORDS_128>::new(
+            &config_128,
+        );
     bionose_static_128.transducer.r0 = baseline_r0_128;
 
-    let mut bionose_continual_128 = BioNoseEngine::<NUM_FEATURES_128, KC_128, SYNAPSES_128, NUM_CLASSES, WORDS_128>::new(&config_128);
+    let mut bionose_continual_128 =
+        BioNoseEngine::<NUM_FEATURES_128, KC_128, SYNAPSES_128, NUM_CLASSES, WORDS_128>::new(
+            &config_128,
+        );
     bionose_continual_128.transducer.r0 = baseline_r0_128;
 
-    let mut shuffled_continual_128 = BioNoseEngine::<NUM_FEATURES_128, KC_128, SYNAPSES_128, NUM_CLASSES, WORDS_128>::new(&config_128);
+    let mut shuffled_continual_128 =
+        BioNoseEngine::<NUM_FEATURES_128, KC_128, SYNAPSES_128, NUM_CLASSES, WORDS_128>::new(
+            &config_128,
+        );
     shuffled_continual_128.transducer.r0 = baseline_r0_128;
-    shuffled_continual_128.mushroom_body.projection = ProjectionMatrix::generate_shuffled_control(0xDEAD_BEEF_CAFE_BABE);
+    shuffled_continual_128.mushroom_body.projection =
+        ProjectionMatrix::generate_shuffled_control(0xDEAD_BEEF_CAFE_BABE);
 
     // Initial training on Batch 1
     let mut init_trained_128 = [0usize; NUM_CLASSES];
@@ -492,17 +530,29 @@ fn main() {
             let c = sample.class_idx;
             let norm_f = normalize_128(&sample.features);
 
-            if euclidean_static_128.predict(&norm_f) == c { e_stat += 1; }
-            if euclidean_continual_128.predict(&norm_f) == c { e_cont += 1; }
+            if euclidean_static_128.predict(&norm_f) == c {
+                e_stat += 1;
+            }
+            if euclidean_continual_128.predict(&norm_f) == c {
+                e_cont += 1;
+            }
 
-            if cosine_static_128.predict(&norm_f) == c { c_stat += 1; }
-            if cosine_continual_128.predict(&norm_f) == c { c_cont += 1; }
+            if cosine_static_128.predict(&norm_f) == c {
+                c_stat += 1;
+            }
+            if cosine_continual_128.predict(&norm_f) == c {
+                c_cont += 1;
+            }
 
             let (s_res, _) = shuffled_continual_128.infer(&sample.features);
-            if !s_res.is_novel && s_res.best_class == c { s_cont += 1; }
+            if !s_res.is_novel && s_res.best_class == c {
+                s_cont += 1;
+            }
 
             let (b_res, _) = bionose_continual_128.infer(&sample.features);
-            if !b_res.is_novel && b_res.best_class == c { b_cont += 1; }
+            if !b_res.is_novel && b_res.best_class == c {
+                b_cont += 1;
+            }
         }
 
         let n = test_indices.len() as f32;
@@ -516,7 +566,9 @@ fn main() {
 
         println!(
             "B {:2} | {} | {:6} | {:9.1}% | {:12.1}% | {:9.1}% | {:12.1}% | {:13.1}% | {:16.1}%",
-            b.batch_id, batch_labels[b_idx], test_indices.len(),
+            b.batch_id,
+            batch_labels[b_idx],
+            test_indices.len(),
             (e_stat as f32 / n) * 100.0,
             (e_cont as f32 / n) * 100.0,
             (c_stat as f32 / n) * 100.0,
@@ -556,7 +608,9 @@ fn main() {
 
     let mut tx_buf = [0u8; 64];
     let start_modbus = Instant::now();
-    let resp_len = slave.process_frame(&req_frame, &mut telemetry, &mut tx_buf).expect("Valid frame");
+    let resp_len = slave
+        .process_frame(&req_frame, &mut telemetry, &mut tx_buf)
+        .expect("Valid frame");
     let modbus_latency = start_modbus.elapsed();
 
     println!("  -> Modbus RTU Frame Processed in: {:.2?}", modbus_latency);
@@ -570,13 +624,31 @@ fn main() {
     println!("FINAL UNCOMPROMISING AUDIT VERDICT");
     println!("================================================================================");
     println!("1. Symmetrical Comparison on M=16 Steady-State:");
-    println!("   - Cosine-Continual:  {:.1}%", (cos_cont_hits_16 as f32 / tot_16) * 100.0);
-    println!("   - BioNose-Continual: {:.1}%", (bio_cont_hits_16 as f32 / tot_16) * 100.0);
-    println!("   - Shuffled-Continual:{:.1}%", (shuf_cont_hits_16 as f32 / tot_16) * 100.0);
+    println!(
+        "   - Cosine-Continual:  {:.1}%",
+        (cos_cont_hits_16 as f32 / tot_16) * 100.0
+    );
+    println!(
+        "   - BioNose-Continual: {:.1}%",
+        (bio_cont_hits_16 as f32 / tot_16) * 100.0
+    );
+    println!(
+        "   - Shuffled-Continual:{:.1}%",
+        (shuf_cont_hits_16 as f32 / tot_16) * 100.0
+    );
     println!();
     println!("2. Symmetrical Comparison on M=128 Dynamic Kinetics:");
-    println!("   - Cosine-Continual:  {:.1}%", (cos_cont_hits_128 as f32 / tot_128) * 100.0);
-    println!("   - BioNose-Continual: {:.1}%", (bio_cont_hits_128 as f32 / tot_128) * 100.0);
-    println!("   - Shuffled-Continual:{:.1}%", (shuf_cont_hits_128 as f32 / tot_128) * 100.0);
+    println!(
+        "   - Cosine-Continual:  {:.1}%",
+        (cos_cont_hits_128 as f32 / tot_128) * 100.0
+    );
+    println!(
+        "   - BioNose-Continual: {:.1}%",
+        (bio_cont_hits_128 as f32 / tot_128) * 100.0
+    );
+    println!(
+        "   - Shuffled-Continual:{:.1}%",
+        (shuf_cont_hits_128 as f32 / tot_128) * 100.0
+    );
     println!("================================================================================");
 }

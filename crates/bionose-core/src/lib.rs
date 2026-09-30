@@ -9,6 +9,7 @@
 //! - Zero dynamic heap allocations (pure static memory)
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::needless_range_loop)]
 
 pub mod adaptive_engine;
 pub mod antennal_lobe;
