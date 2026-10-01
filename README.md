@@ -56,6 +56,10 @@
 
 ## What is BioNose-Edge?
 
+> [!TIP]
+> **TL;DR (The 30-Second Summary):**  
+> Physical gas sensors suffer from high false-alarm rates during rain or humidity swings and drift severely over months of aging. Inspired by the fruit fly (*Drosophila melanogaster*) olfactory circuit, **BioNose-Edge** is an ultra-lightweight `#![no_std]` Rust engine that cancels ambient weather interference and enables coin-cell-powered edge nodes to detect battery runaway off-gassing or perishable food spoilage accurately across multi-year deployments.
+
 **BioNose-Edge** is a bare-metal, zero-allocation (`#![no_std]`) embedded olfactory engine engineered for low-power edge hardware. It linearizes non-linear chemical gas sensor physics via Weber-Fechner logarithmic transduction, cancels common-mode environmental swings (humidity/temperature) via Antennal Lobe divisive normalization, and tracks multi-year sensor aging via Continual Leaky Cosine Centroids.
 
 | Field | Detail |
