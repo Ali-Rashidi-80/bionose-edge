@@ -48,6 +48,7 @@
 - [Production Readiness](#production-readiness)
 - [Repository Layout](#repository-layout)
 - [Documentation Matrix](#documentation-matrix)
+- [Scientific References & Grounding](#scientific-references--grounding)
 - [Contributing & License](#contributing--license)
 
 </details>
@@ -453,15 +454,32 @@ bionose-edge/
 
 ---
 
+## Scientific References & Grounding
+
+The mathematical models, sensor physics, and neuromorphic architectures in `BioNose-Edge` are directly grounded in the following peer-reviewed literature and canonical physical datasets:
+
+| # | Domain & Layer | Foundational Peer-Reviewed Citation | Digital Object Identifier (<bdi>DOI</bdi>) |
+| :-: | :--- | :--- | :-: |
+| **1** | **Physical Sensor Drift Benchmark** | **Alexander Vergara et al. (2012)**<br>Chemical gas sensor drift compensation using classifier ensembles.<br>*Sensors and Actuators B: Chemical*, 166–167, pp. 320–329. | [10.1016/j.snb.2012.01.074](https://doi.org/10.1016/j.snb.2012.01.074) |
+| **2** | **Drosophila Olfactory Neural Circuit** | **Sanjoy Dasgupta, Charles F. Stevens, Saket Navlakha (2017)**<br>A neural algorithm for a fundamental computing problem.<br>*Science*, 358(6364), pp. 793–796. | [10.1126/science.aam9868](https://doi.org/10.1126/science.aam9868) |
+| **3** | **Antennal Lobe Divisive Normalization** | **Shawn R. Olsen, Vikas Bhandawat, Rachel I. Wilson (2010)**<br>Divisive normalization in olfactory population codes.<br>*Neuron*, 66(2), pp. 287–299. | [10.1016/j.neuron.2010.04.009](https://doi.org/10.1016/j.neuron.2010.04.009) |
+| **4** | **Whole-Brain Connectome (FlyWire)** | **Sven Dorkenwald, Philipp Schlegel, et al. (2024)**<br>Neuronal wiring diagram of an adult brain.<br>*Nature*, 634, pp. 124–138. | [10.1038/s41586-024-07558-y](https://doi.org/10.1038/s41586-024-07558-y) |
+| **5** | **Semiconductor Power Laws & Adsorption** | **Noboru Yamazoe, Kengo Shimanoe (2008)**<br>Theory of power laws for semiconductor gas sensors.<br>*Sensors and Actuators B: Chemical*, 128(2), pp. 566–573. | [10.1016/j.snb.2007.07.036](https://doi.org/10.1016/j.snb.2007.07.036) |
+| **6** | **Electronic Nose History & Architecture** | **Julian W. Gardner, Philip N. Bartlett (1994)**<br>A brief history of electronic noses.<br>*Sensors and Actuators B: Chemical*, 18(1–3), pp. 210–211. | [10.1016/0925-4005(94)87085-3](https://doi.org/10.1016/0925-4005(94)87085-3) |
+| **7** | **Bounded Continuous Hebbian Plasticity** | **Erkki Oja (1982)**<br>Simplified neuron model as a principal component analyzer.<br>*Journal of Mathematical Biology*, 15(3), pp. 267–273. | [10.1007/BF00275687](https://doi.org/10.1007/BF00275687) |
+
+> [!NOTE]
+> **Canonical Physical Dataset:** The 36-month, 16-sensor continuous drift dataset from UC San Diego is publicly archived at the [UCI Machine Learning Repository (Dataset ID: 224)](https://archive.ics.uci.edu/dataset/224/gas+sensor+array+drift+dataset).
+
+---
+
 ## Contributing & License
 
 Contributions following our zero-trust engineering standards are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for pull request workflows.
 
-Dual-licensed under either of:
-- **MIT License** ([LICENSE-MIT](LICENSE-MIT))
-- **Apache License, Version 2.0** ([LICENSE-APACHE](LICENSE-APACHE))
-
-at your option.
+Dual-licensed under either of the following licenses:
+- [**MIT License**](LICENSE-MIT)
+- [**Apache License, Version 2.0**](LICENSE-APACHE)
 
 ---
 

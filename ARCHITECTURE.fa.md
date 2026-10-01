@@ -96,3 +96,22 @@ $$\mathbf{c}_k \leftarrow (1 - \alpha) \mathbf{c}_k + \alpha \mathbf{y}$$
 
 ### ۲.۴ لایه چهارم: پروتکل تله‌متری صنعتی <bdi>Modbus RTU</bdi>
 پاسخ‌دهی به درخواست‌های خط ارتباطی صنعتی با تاخیر کمتر از ۱ میکروثانیه و بدون فراخوانی سیستم‌عامل انجام شده و وضعیت سنسورها در ثبات‌های استاندارد صنعتی در دسترس کنترل‌کننده‌های خارجی قرار می‌گیرد.
+
+---
+
+## ۳. مراجع و مقالات معتبر علمی
+
+مبانی نظری، اثبات‌های ریاضی و داده‌های آزمون <bdi>**BioNose-Edge**</bdi> بر پایه منابع معتبر زیر استوار است:
+
+| # | محور علمی و کاربرد | مرجع کامل مقاله داوری‌شده (<bdi>Citation</bdi>) | شناسه دیجیتال (<bdi>DOI</bdi>) |
+| :-: | :--- | :--- | :-: |
+| **۱** | **دریفت فیزیکی سنسورهای گاز** | <bdi>**Alexander Vergara et al. (2012)**<br>Chemical gas sensor drift compensation using classifier ensembles.<br>*Sensors and Actuators B: Chemical*, 166–167, pp. 320–329.</bdi> | [<bdi>10.1016/j.snb.2012.01.074</bdi>](https://doi.org/10.1016/j.snb.2012.01.074) |
+| **۲** | **مدل بویایی مگس سرکه** | <bdi>**Sanjoy Dasgupta, Charles F. Stevens, Saket Navlakha (2017)**<br>A neural algorithm for a fundamental computing problem.<br>*Science*, 358(6364), pp. 793–796.</bdi> | [<bdi>10.1126/science.aam9868</bdi>](https://doi.org/10.1126/science.aam9868) |
+| **۳** | **نرمال‌سازی تقسیمی لوب شاخکی** | <bdi>**Shawn R. Olsen, Vikas Bhandawat, Rachel I. Wilson (2010)**<br>Divisive normalization in olfactory population codes.<br>*Neuron*, 66(2), pp. 287–299.</bdi> | [<bdi>10.1016/j.neuron.2010.04.009</bdi>](https://doi.org/10.1016/j.neuron.2010.04.009) |
+| **۴** | **کانکتوم مغز کامل حشره (<bdi>FlyWire</bdi>)** | <bdi>**Sven Dorkenwald, Philipp Schlegel, et al. (2024)**<br>Neuronal wiring diagram of an adult brain.<br>*Nature*, 634, pp. 124–138.</bdi> | [<bdi>10.1038/s41586-024-07558-y</bdi>](https://doi.org/10.1038/s41586-024-07558-y) |
+| **۵** | **فیزیک سنسور اکسید فلزی** | <bdi>**Noboru Yamazoe, Kengo Shimanoe (2008)**<br>Theory of power laws for semiconductor gas sensors.<br>*Sensors and Actuators B: Chemical*, 128(2), pp. 566–573.</bdi> | [<bdi>10.1016/j.snb.2007.07.036</bdi>](https://doi.org/10.1016/j.snb.2007.07.036) |
+| **۶** | **تاریخچه بینی‌های الکترونیکی** | <bdi>**Julian W. Gardner, Philip N. Bartlett (1994)**<br>A brief history of electronic noses.<br>*Sensors and Actuators B: Chemical*, 18(1–3), pp. 210–211.</bdi> | [<bdi>10.1016/0925-4005(94)87085-3</bdi>](https://doi.org/10.1016/0925-4005(94)87085-3) |
+| **۷** | **پلاستیسیته خطی مقید اوجا** | <bdi>**Erkki Oja (1982)**<br>Simplified neuron model as a principal component analyzer.<br>*Journal of Mathematical Biology*, 15(3), pp. 267–273.</bdi> | [<bdi>10.1007/BF00275687</bdi>](https://doi.org/10.1007/BF00275687) |
+
+> [!NOTE]
+> **دیتاست مرجع بنچمارک فیزیکی سنسورها:** مخزن رسمی دیتاست سن‌دیگو در [دانشگاه کالیفرنیا، ارواین (UCI)](https://archive.ics.uci.edu/dataset/224/gas+sensor+array+drift+dataset) در دسترس عموم قرار دارد.
