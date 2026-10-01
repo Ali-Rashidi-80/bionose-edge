@@ -164,3 +164,83 @@ pub fn load_all_batches_128(dir: &Path) -> Result<Vec<UciBatch<128>>, std::io::E
     }
     Ok(batches)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn test_uci_sample_parsing_16() {
+        let content = "1 1:12000.5 9:8500.0 17:3400.2 25:999.0 128:50.0
+";
+        let temp_dir = std::env::temp_dir();
+        let file_path = temp_dir.join("test_batch_16_parsing.dat");
+        {
+            let mut file = File::create(&file_path).unwrap();
+            file.write_all(content.as_bytes()).unwrap();
+        }
+
+        let batch = load_batch_16(&file_path, 1).expect("Failed to load mock batch");
+        assert_eq!(batch.batch_id, 1);
+        assert_eq!(batch.samples.len(), 1);
+
+        let sample = &batch.samples[0];
+        assert_eq!(sample.class_idx, 0); // 1-based class '1' -> 0 (Ethanol)
+        assert!((sample.features[0] - 12000.5).abs() < 1e-4); // index 1
+        assert!((sample.features[1] - 8500.0).abs() < 1e-4); // index 9
+        assert!((sample.features[2] - 3400.2).abs() < 1e-4); // index 17
+        assert!((sample.features[3] - 999.0).abs() < 1e-4); // index 25
+        assert_eq!(sample.features[4], 0.0); // unassigned steady-state features default to 0.0
+
+        let _ = std::fs::remove_file(file_path);
+    }
+
+    #[test]
+    fn test_uci_sample_parsing_128() {
+        let content = "6 1:100.0 2:200.0 128:1280.0
+";
+        let temp_dir = std::env::temp_dir();
+        let file_path = temp_dir.join("test_batch_128_parsing.dat");
+        {
+            let mut file = File::create(&file_path).unwrap();
+            file.write_all(content.as_bytes()).unwrap();
+        }
+
+        let batch = load_batch_128(&file_path, 2).expect("Failed to load mock batch 128");
+        assert_eq!(batch.batch_id, 2);
+        assert_eq!(batch.samples.len(), 1);
+
+        let sample = &batch.samples[0];
+        assert_eq!(sample.class_idx, 5); // 1-based class '6' -> 5 (Toluene)
+        assert!((sample.features[0] - 100.0).abs() < 1e-4);
+        assert!((sample.features[1] - 200.0).abs() < 1e-4);
+        assert!((sample.features[127] - 1280.0).abs() < 1e-4);
+
+        let _ = std::fs::remove_file(file_path);
+    }
+
+    #[test]
+    fn test_uci_invalid_and_empty_lines() {
+        let content = "
+   
+0 1:500.0
+7 1:500.0
+invalid line
+3 1:300.0
+";
+        let temp_dir = std::env::temp_dir();
+        let file_path = temp_dir.join("test_batch_invalid_parsing.dat");
+        {
+            let mut file = File::create(&file_path).unwrap();
+            file.write_all(content.as_bytes()).unwrap();
+        }
+
+        let batch = load_batch_16(&file_path, 3).expect("Failed to load mock batch");
+        // Only class '3' is valid (0 and 7 are out of 1..=6 range)
+        assert_eq!(batch.samples.len(), 1);
+        assert_eq!(batch.samples[0].class_idx, 2); // Ammonia (index 2)
+
+        let _ = std::fs::remove_file(file_path);
+    }
+}

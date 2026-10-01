@@ -92,7 +92,7 @@ mod tests {
         let s = transducer.transduce(&clean_air);
         for &val in &s {
             assert!(
-                val >= 0.0 && val < 0.01,
+                (0.0..0.01).contains(&val),
                 "Clean air should yield near-zero response"
             );
         }
@@ -108,5 +108,52 @@ mod tests {
         assert!(s[0] > s[1]);
         assert!(s[1] > s[2]);
         assert!(s[3] > s[0]);
+    }
+
+    #[test]
+    fn test_with_channel_specific_baselines() {
+        let baselines = [10_000.0, 20_000.0, 50_000.0, 100_000.0];
+        let transducer = WeberFechnerTransducer::<4>::with_baselines(baselines, 1e-6, 0.0);
+        let s = transducer.transduce(&baselines);
+        for &val in &s {
+            assert!(
+                (0.0..0.01).contains(&val),
+                "Clean air with matched baselines should be near zero"
+            );
+        }
+    }
+
+    #[test]
+    fn test_baseline_adaptation_exponential_moving_average() {
+        let mut transducer = WeberFechnerTransducer::<2>::new(10_000.0, 1e-6, 0.0);
+        let drift = [12_000.0, 12_000.0];
+        transducer.update_baseline(&drift, 0.5);
+        assert!((transducer.r0[0] - 11_000.0).abs() < 1e-3);
+        assert!((transducer.r0[1] - 11_000.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_sub_zero_or_short_circuit_clamping() {
+        let transducer = WeberFechnerTransducer::<2>::new(10_000.0, 1e-6, 0.0);
+        let extreme = [-500.0, 0.0];
+        let s = transducer.transduce(&extreme);
+        assert!(s[0].is_finite());
+        assert!(s[1].is_finite());
+        assert!(s[0] > 0.0);
+        assert!(s[1] > 0.0);
+    }
+
+    #[test]
+    fn test_activation_threshold_gating() {
+        let transducer = WeberFechnerTransducer::<2>::new(10_000.0, 1e-6, 1.0);
+        let mild = [8_000.0, 10_000.0];
+        let s = transducer.transduce(&mild);
+        assert_eq!(s[0], 0.0, "Sub-threshold response must be zeroed");
+        assert_eq!(s[1], 0.0, "Clean air response must be zeroed");
+
+        let strong = [1_000.0, 10_000.0];
+        let s2 = transducer.transduce(&strong);
+        assert!(s2[0] > 1.0, "Super-threshold response must pass through");
+        assert_eq!(s2[1], 0.0);
     }
 }

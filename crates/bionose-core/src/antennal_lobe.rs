@@ -105,4 +105,21 @@ mod tests {
             energy
         );
     }
+
+    #[test]
+    fn test_default_config_initialization() {
+        let al = AntennalLobe::<16>::default_config();
+        assert_eq!(al.sigma, 0.05);
+        assert_eq!(al.lateral_inhibition_strength, 0.85);
+    }
+
+    #[test]
+    fn test_all_zero_inputs_zero_division_guard() {
+        let al = AntennalLobe::<4>::new(0.05, 0.85);
+        let zeros = [0.0; 4];
+        let y = al.normalize(&zeros);
+        for &val in &y {
+            assert_eq!(val, 0.0, "Zero input must produce zero output without NaN");
+        }
+    }
 }

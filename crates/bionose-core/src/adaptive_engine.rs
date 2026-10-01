@@ -331,4 +331,37 @@ mod tests {
         assert!(res.is_novel);
         assert_eq!(res.confidence_basis_points, 0);
     }
+
+    #[test]
+    fn test_adaptive_engine_to_modbus_telemetry() {
+        let config = AdaptiveNoseConfig::industrial_default();
+        let engine = AdaptiveNoseEngine::<4, 2>::new(&config);
+
+        let result_known = AdaptiveReadoutResult {
+            best_class: 1,
+            similarity: 0.95,
+            confidence_basis_points: 9500,
+            is_novel: false,
+            signal_magnitude: 1.25,
+        };
+        let telemetry_known = engine.to_modbus_telemetry(&result_known, 25, 120);
+        assert_eq!(telemetry_known.system_status, 1);
+        assert_eq!(telemetry_known.detected_gas_class, 2);
+        assert_eq!(telemetry_known.confidence_basis_points, 9500);
+        assert!(!telemetry_known.is_novel);
+        assert_eq!(telemetry_known.latency_us, 25);
+        assert_eq!(telemetry_known.drift_degradation_index, 120);
+
+        let result_novel = AdaptiveReadoutResult {
+            best_class: 0,
+            similarity: 0.20,
+            confidence_basis_points: 0,
+            is_novel: true,
+            signal_magnitude: 0.05,
+        };
+        let telemetry_novel = engine.to_modbus_telemetry(&result_novel, 30, 400);
+        assert_eq!(telemetry_novel.system_status, 2);
+        assert_eq!(telemetry_novel.detected_gas_class, 0);
+        assert!(telemetry_novel.is_novel);
+    }
 }
