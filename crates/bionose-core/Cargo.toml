@@ -1,10 +1,16 @@
-[package]
+﻿[package]
 name = "bionose-core"
 version = "0.1.0"
 edition = "2021"
 authors = ["Ali Rashidi"]
 description = "Neuromorphic on-device olfactory engine inspired by Drosophila melanogaster antennal lobe and mushroom body (no_std, zero-alloc)"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/Ali-Rashidi-80/bionose-edge"
+homepage = "https://github.com/Ali-Rashidi-80/bionose-edge"
+documentation = "https://docs.rs/bionose-core"
+readme = "README.md"
+keywords = ["neuromorphic", "no-std", "gas-sensor", "drosophila", "tinyml"]
+categories = ["embedded", "no-std", "science", "hardware-support"]
 
 [features]
 default = ["std"]

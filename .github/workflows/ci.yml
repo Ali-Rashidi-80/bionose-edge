@@ -32,7 +32,7 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
   nostd-verification:
-    name: Embedded #![no_std] Core Verification
+    name: Embedded #![no_std] Hardware Cross-Compilation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -40,12 +40,23 @@ jobs:
 
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv7em-none-eabihf, riscv32imc-unknown-none-elf
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Verify bionose-core compiles in pure no_std (no default features)
+      - name: Verify bionose-core compiles in pure no_std (native)
         run: cargo check -p bionose-core --no-default-features
+
+      - name: Cross-compile for ARM Cortex-M4/M7 (thumbv7em-none-eabihf)
+        run: cargo check -p bionose-core --no-default-features --target thumbv7em-none-eabihf
+
+      - name: Cross-compile for RISC-V / ESP32 (riscv32imc-unknown-none-elf)
+        run: cargo check -p bionose-core --no-default-features --target riscv32imc-unknown-none-elf
+
+      - name: Verify crates.io package readiness
+        run: cargo package -p bionose-core --no-verify
 
   test-suite:
     name: Unit, Integration & Adversarial Stress Tests
