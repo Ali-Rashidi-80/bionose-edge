@@ -8,7 +8,8 @@
 
 **موتور پردازش بویایی جاسازی‌شده، فوق‌سریع و مقاوم به دریفت سنسور در وضعیت <bdi>#![no_std]</bdi> زبان <bdi>Rust</bdi> — بدون تخصیص حافظه پویا، استنتاج در کمتر از ۲ میکروثانیه، گیت‌های راستی‌آزمایی دقیق، آزموده شده با داده‌های فیزیکی ۳۶ ماهه.**
 
-[![CI](https://img.shields.io/badge/CI-%D9%85%D9%88%D9%81%D9%82-brightgreen.svg)]()
+[![CI](https://github.com/Ali-Rashidi-80/bionose-edge/actions/workflows/ci.yml/badge.svg)](https://github.com/Ali-Rashidi-80/bionose-edge/actions/workflows/ci.yml)
+[![انتشار](https://img.shields.io/github/v/release/Ali-Rashidi-80/bionose-edge?color=blue&logo=github&label=%D8%A7%D9%86%D8%AA%D8%B4%D8%A7%D8%B1)](https://github.com/Ali-Rashidi-80/bionose-edge/releases)
 [![نسخه](https://img.shields.io/badge/%D9%86%D8%B3%D8%AE%D9%87-0.1.0-3fb950.svg)](Cargo.toml)
 [![مجوز](https://img.shields.io/badge/%D9%85%D8%AC%D9%88%D8%B2-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 [![Rust](https://img.shields.io/badge/Rust-1.80+-orange.svg)](Cargo.toml)

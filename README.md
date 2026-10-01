@@ -8,7 +8,8 @@
 
 **Ultra-low-latency, drift-resilient embedded olfactory engine in `#![no_std]` Rust — Zero-heap, sub-2µs inference, honest gates, 36-month physical drift verified.**
 
-[![CI](https://img.shields.io/badge/CI-Passing-brightgreen.svg)]()
+[![CI](https://github.com/Ali-Rashidi-80/bionose-edge/actions/workflows/ci.yml/badge.svg)](https://github.com/Ali-Rashidi-80/bionose-edge/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Ali-Rashidi-80/bionose-edge?color=blue&logo=github)](https://github.com/Ali-Rashidi-80/bionose-edge/releases)
 [![Version](https://img.shields.io/badge/version-0.1.0-3fb950.svg)](Cargo.toml)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 [![Rust](https://img.shields.io/badge/Rust-1.80+-orange.svg)](Cargo.toml)
