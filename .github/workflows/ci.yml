@@ -32,7 +32,7 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
   nostd-verification:
-    name: Embedded #![no_std] Hardware Cross-Compilation
+    name: Embedded #![no_std] Hardware Cross-Compilation Matrix
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -41,7 +41,14 @@ jobs:
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: thumbv7em-none-eabihf, riscv32imc-unknown-none-elf
+          targets: >-
+            thumbv6m-none-eabi,
+            thumbv7m-none-eabi,
+            thumbv7em-none-eabi,
+            thumbv7em-none-eabihf,
+            thumbv8m.main-none-eabihf,
+            riscv32imc-unknown-none-elf,
+            riscv32imac-unknown-none-elf
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
@@ -49,14 +56,29 @@ jobs:
       - name: Verify bionose-core compiles in pure no_std (native)
         run: cargo check -p bionose-core --no-default-features
 
-      - name: Cross-compile for ARM Cortex-M4/M7 (thumbv7em-none-eabihf)
+      - name: Cross-compile ARM Cortex-M0/M0+ / RP2040 (thumbv6m-none-eabi)
+        run: cargo check -p bionose-core --no-default-features --target thumbv6m-none-eabi
+
+      - name: Cross-compile ARM Cortex-M3 / STM32F1 (thumbv7m-none-eabi)
+        run: cargo check -p bionose-core --no-default-features --target thumbv7m-none-eabi
+
+      - name: Cross-compile ARM Cortex-M4/M7 soft-float (thumbv7em-none-eabi)
+        run: cargo check -p bionose-core --no-default-features --target thumbv7em-none-eabi
+
+      - name: Cross-compile ARM Cortex-M4F/M7F hard-float (thumbv7em-none-eabihf)
         run: cargo check -p bionose-core --no-default-features --target thumbv7em-none-eabihf
 
-      - name: Cross-compile for RISC-V / ESP32 (riscv32imc-unknown-none-elf)
+      - name: Cross-compile ARM Cortex-M33 hard-float (thumbv8m.main-none-eabihf)
+        run: cargo check -p bionose-core --no-default-features --target thumbv8m.main-none-eabihf
+
+      - name: Cross-compile RISC-V RV32IMC / ESP32-C3 / CH32V (riscv32imc-unknown-none-elf)
         run: cargo check -p bionose-core --no-default-features --target riscv32imc-unknown-none-elf
 
-      - name: Verify crates.io package readiness
-        run: cargo package -p bionose-core --no-verify
+      - name: Cross-compile RISC-V RV32IMAC / ESP32-C6 / ESP32-H2 (riscv32imac-unknown-none-elf)
+        run: cargo check -p bionose-core --no-default-features --target riscv32imac-unknown-none-elf
+
+      - name: Verify crates.io package readiness with full validation
+        run: cargo package -p bionose-core
 
   test-suite:
     name: Unit, Integration & Adversarial Stress Tests

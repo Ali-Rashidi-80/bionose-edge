@@ -60,7 +60,7 @@ jobs:
           cd target/${{ matrix.target }}/release
           7z a ../../../${{ matrix.archive_name }} ${{ matrix.bin_name }}
           cd ../../..
-          certutil -hashfile ${{ matrix.archive_name }} SHA256 | grep -v "hash" | grep -v "CertUtil" | tr -d ' \r\n' > ${{ matrix.archive_name }}.sha256
+          sha256sum ${{ matrix.archive_name }} > ${{ matrix.archive_name }}.sha256
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
@@ -70,9 +70,33 @@ jobs:
             ${{ matrix.archive_name }}
             ${{ matrix.archive_name }}.sha256
 
+  package-crate:
+    name: Package bionose-core Crate (.crate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build .crate package
+        run: |
+          cargo package -p bionose-core
+          cp target/package/bionose-core-*.crate ./
+          sha256sum bionose-core-*.crate > bionose-core-crate.sha256
+
+      - name: Upload crate artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bionose-core-crate
+          path: |
+            bionose-core-*.crate
+            bionose-core-crate.sha256
+
   publish-github-release:
     name: Publish GitHub Release & Release Notes
-    needs: build-binaries
+    needs: [build-binaries, package-crate]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
